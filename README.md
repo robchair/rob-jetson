@@ -60,14 +60,13 @@ ros2 node list
 ```
 
 
-# To see raw LiDAR LaserScan output in Rviz2:
+# To run SLAM:
 
 Note: Using this remository driver git clone `https://github.com/ldrobotSensorTeam/ldlidar_ros2.git`
 
 ```bash
 cd ~/rob/rob_ws
 source /opt/ros/humble/setup.bash
-colcon build --symlink-install
 source install/setup.bash
 ros2 launch ldlidar_ros2 ld19.launch.py
 
@@ -75,70 +74,11 @@ ros2 launch ldlidar_ros2 ld19.launch.py
 ros2 topic hz /scan
 ```
 
-In a new terminal, start the temporary odom node:
+In a new terminal, start Arduino Mega driver node:
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/rob/rob_ws/install/setup.bash
-ros2 run wheelchair_localization cmdvel_odom --ros-args -p cmd_topic:=/cmd_vel_safe
-```
-
-In another terminal run:
-```bash
-source /opt/ros/humble/setup.bash
-source ~/rob/rob_ws/install/setup.bash
-#ros2 run tf2_ros tf2_echo base_link base_laser
-
-# OR (better)
-
-ros2 run tf2_ros tf2_echo odom base_link
-```
-## To run SLAM:
-
-```bash
-source /opt/ros/humble/setup.bash
-source ~/rob/rob_ws/install/setup.bash
-#ros2 launch slam_toolbox online_async_launch.py
-ros2 launch slam_toolbox online_async_launch.py slam_params_file:=/home/rob/rob/rob_ws/src/wheelchair_bringup/config/slam_toolbox.yaml
-```
-
-To see if /map is being published:
-```bash
-ros2 topic hz /map
-```
-
-Then run in a new terminal to launch Rviz2:
-```bash
-source /opt/ros/humble/setup.bash
-source ~/rob/rob_ws/install/setup.bash
-rviz2
-```
-
-In the Rviz2 GUI:
-
-Set Fixed Frame = base_link
-
-Add -> LaserScan
-
-Set Topic = /scan
-
-
-Then in the Rviz2 GUI, add the following for SLAM map display:
-
-- Map (/map)
-
-- TF
-
-- LaserScan (/scan)
-
-
-### To launch encoder odometry:
-
-- Have the arduino hooked up to the encoders flashed with a script that works
-
-Run the following command in one terminal (link encoders and arduino with the Jetson and ROS system):
-
-```bash
-ros2 run wheelchair_localization encoder_serial_node --ros-args -p port:=/dev/ttyACM0 -p baud:=115200
+ros2 run arduino_base_driver arduino_base_driver_node   --ros-args   -p port:=/dev/ttyACM0   -p baud:=115200
 ```
 
 Then bring up odom node:
@@ -148,17 +88,17 @@ ros2 run wheelchair_localization encoder_odom \
   --ros-args \
   -p encoder_topic:=/wheel_encoder_ticks \
   -p odom_topic:=/odom \
-  -p wheel_radius_m:=0.15 \
-  -p wheel_base_m:=0.60 \
-  -p ticks_per_rev:=1203.0 \
+  -p wheel_radius_m:=0.29 \
+  -p wheel_base_m:=0.54 \
+  -p ticks_per_rev:=1199.67 \
   -p left_sign:=1.0 \
-  -p right_sign:=1.0
+  -p right_sign:=-1.0
 ```
 
 x y z: the sensor’s position relative to base_link, in meters
 roll pitch yaw: the sensor’s orientation relative to base_link, in radian
 
-#### Launch static TF for ultrasonic:
+Launch static TF for ultrasonic:
 
 ```bash
 ros2 run tf2_ros static_transform_publisher \
@@ -168,7 +108,17 @@ ros2 run tf2_ros static_transform_publisher \
   --child-frame-id ultrasonic_link
   ```
 
-Launch SLAM toolbox, then launch the following to verify live TF:
+Launch SLAM toolbox:
+
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/rob/rob_ws/install/setup.bash
+ros2 launch slam_toolbox online_async_launch.py \ 
+slam_params_file:=/home/rob/rob/rob_ws/src/wheelchair_bringup/config/slam_toolbox.yaml
+```
+
+Launch the following to verify live TF:
 
 ```bash
 ros2 run tf2_tools view_frames

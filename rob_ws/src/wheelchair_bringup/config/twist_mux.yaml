@@ -13,5 +13,6 @@ twist_mux:
         topic   : /cmd_vel_nav
         timeout : 0.5
         priority: 10
+      eeg:
     output_topic: /cmd_vel_raw
 

@@ -55,7 +55,7 @@ def generate_launch_description():
             output="screen",
             parameters=[
                 {"port": "/dev/ttyACM0"},
-                {"baud": 9600},
+                {"baud": 115200},
                 {"cmd_timeout_sec": 0.5},
             ],
         ),

@@ -40,7 +40,7 @@ class EncoderOdom(Node):
 
         self.declare_parameter("wheel_radius_m", 0.15)#change to new radius
         self.declare_parameter("wheel_base_m", 0.60)#change to new base 
-        self.declare_parameter("ticks_per_rev", 600.0)
+        self.declare_parameter("ticks_per_rev", 1200.0)
 
         # Optional sign correction at ROS level
         self.declare_parameter("left_sign", 1.0)
@@ -133,7 +133,7 @@ class EncoderOdom(Node):
         self.x += d_center * math.cos(yaw_mid)
         self.y += d_center * math.sin(yaw_mid)
         self.yaw += d_theta
-        selfyaw = math.atan2(math.sin(self.yaw), math.cos(self.yaw))    #Normalize yaw after update
+        self.yaw = math.atan2(math.sin(self.yaw), math.cos(self.yaw))    #Normalize yaw after update
 
         self.last_vx = d_center / dt
         self.last_wz = d_theta / dt
