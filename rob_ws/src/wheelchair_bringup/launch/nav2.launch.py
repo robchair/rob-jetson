@@ -91,22 +91,37 @@ def generate_launch_description():
         ],
     ),
 
-    # AMCL
+    # # AMCL
+    # Node(
+    #     package="nav2_amcl",
+    #     executable="amcl",
+    #     name="amcl",
+    #     output="screen",
+    #     parameters=[{
+    #         "robot_model_type": "nav2_amcl::DifferentialMotionModel",
+    #         "base_frame_id": "base_link",
+    #         "odom_frame_id": "odom",
+    #         "global_frame_id": "map",
+    #         "scan_topic": "/scan_filtered",
+    #         "min_particles": 200,
+    #         "max_particles": 500,
+    #         "tf_broadcast": True,
+    #     }],
+    # ),
+
+    # SLAM Toolbox in localization mode
     Node(
-        package="nav2_amcl",
-        executable="amcl",
-        name="amcl",
-        output="screen",
-        parameters=[{
-            "robot_model_type": "nav2_amcl::DifferentialMotionModel",
-            "base_frame_id": "base_link",
-            "odom_frame_id": "odom",
-            "global_frame_id": "map",
-            "scan_topic": "/scan_filtered",
-            "min_particles": 200,
-            "max_particles": 500,
-            "tf_broadcast": True,
-        }],
+        package='slam_toolbox',
+        executable='localization_slam_toolbox_node',
+        name='slam_toolbox',
+        output='screen',
+        parameters=[
+            PathJoinSubstitution([
+                FindPackageShare("wheelchair_bringup"),
+                "config",
+                "slam_localization.yaml",
+            ]),
+        ],
     ),
 
     Node(
@@ -117,7 +132,7 @@ def generate_launch_description():
         parameters=[{
             "use_sim_time": False,
             "autostart": True,
-            "node_names": ["map_server", "amcl"],
+            "node_names": ["map_server"],       # No more "amcl"
         }],
     ),
 
