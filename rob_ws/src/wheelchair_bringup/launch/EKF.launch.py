@@ -93,15 +93,13 @@ def generate_launch_description():
             "port":                 LaunchConfiguration("imu_port"),
             "baud":                 115200,
             "frame_id":             "imu_link",
-            "poll_hz":              20.0,       # up from 10Hz — EKF runs at 30Hz
+            "poll_hz":              15.0,        # was 20.0 — reduced for serial stability
             "gate_on_startup":      True,
-            # Lower these to 1 with debug_calibration:=true for first bringup
             "required_gyro_cal":    3,
             "required_accel_cal":   3,
-            "required_sys_cal":     0,
-            "required_mag_cal":     0,
+            "required_sys_cal":     1,           # was 0
+            "required_mag_cal":     3,           # was 0 — must match test calibration
             "warn_bad_reads":       True,
-            # Covariances: tighter = EKF trusts IMU more
             "orientation_cov_z":    0.05,
             "angular_vel_cov_z":    0.02,
         }],
