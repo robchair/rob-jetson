@@ -2,7 +2,7 @@
 import serial
 import time
 
-port = '/dev/ttyUSB1'
+port = '/dev/ttyUSB0'
 ser = serial.Serial(port, 115200, timeout=1)
 
 def write_reg(reg, val):
