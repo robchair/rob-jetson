@@ -33,3 +33,11 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/cmd
 ```
 * Next step: maybe make keyboard launch automatically by editing `mvp.launch.py`?
 * TODO: Make the keyboard controls have persistence until another control is given (right now motors stop after 0.5s).
+
+# Troubleshooting when having build issues:
+
+If ROS2 is mentioning it cant find certain launch files, despite the setup.py files in each package looking correct, run the following commands to clear the cached build data.
+```bash
+cd ~/rob/rob_ws
+rm -rf build install log
+```

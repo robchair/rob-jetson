@@ -23,7 +23,7 @@ class ArduinoBaseDriver(Node):
         self.declare_parameter("baud", 9600)
         self.declare_parameter("linear_deadband", 0.05)
         self.declare_parameter("angular_deadband", 0.10)
-        self.declare_parameter("cmd_timeout_sec", 0.5)
+        self.declare_parameter("cmd_timeout_sec", 0.05)
 
         self.port = self.get_parameter("port").value
         self.baud = int(self.get_parameter("baud").value)
