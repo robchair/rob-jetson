@@ -9,7 +9,7 @@ git submodule update --init --recursive
 ```
 * No git submodules as of current
 
-# To run voice control but with ROS2, do the following:
+# To run base ROS2 control model, do the following:
 
 ```bash
 source ~/rob/roboVoice/venv/bin/activate
@@ -19,6 +19,20 @@ colcon build --symlink-install
 source install/setup.bash
 ros2 launch wheelchair_bringup mvp.launch.py # Only need to run this one if no changes were made since last build
 
+```
+
+# To activate voice control 
+
+```bash
+source /home/rob/rob/roboVoice/venv/bin/activate
+
+export PYTHONPATH=/home/rob/rob:$PYTHONPATH
+
+python3 -m robovoice_ros2.voice_cmd_node \
+  --ros-args \
+  -r __node:=voice_cmd_node \
+  -p linear_speed:=0.30 \
+  -p angular_speed:=0.80
 ```
 
 # To activate keyboard control:
