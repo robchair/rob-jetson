@@ -155,18 +155,6 @@ ros2 run wheelchair_localization encoder_odom \
   -p right_sign:=1.0
 ```
 
-#### Launch static TF for LiDAR:
-
-Note: change to real mounting points when sensors are mounted.
-
-```bash
-ros2 run tf2_ros static_transform_publisher \
-  --x 0.00 --y 0.00 --z 0.20 \
-  --roll 0.0 --pitch 0.0 --yaw 0.0 \
-  --frame-id base_link \
-  --child-frame-id base_laser
-```
-
 x y z: the sensor’s position relative to base_link, in meters
 roll pitch yaw: the sensor’s orientation relative to base_link, in radian
 
@@ -184,4 +172,41 @@ Launch SLAM toolbox, then launch the following to verify live TF:
 
 ```bash
 ros2 run tf2_tools view_frames
+```
+
+
+Ensure the definition in `/home/rob/rob/rob_ws/src/ldlidar_ros2/launch/ld19.launch.py` contains these parameters:
+
+```python
+def generate_launch_description():
+  # LDROBOT LiDAR publisher node
+  ldlidar_node = Node(
+      package='ldlidar_ros2',
+      executable='ldlidar_ros2_node',
+      name='ldlidar_publisher_ld19',
+      output='screen',
+      parameters=[
+        {'product_name': 'LDLiDAR_LD19'},
+        {'laser_scan_topic_name': 'scan'},
+        {'point_cloud_2d_topic_name': 'pointcloud2d'},
+        {'frame_id': 'base_laser'},
+        {'port_name': '/dev/ttyUSB0'},
+        {'serial_baudrate': 230400},
+        {'laser_scan_dir': True},
+        {'enable_angle_crop_func': True},
+        {'angle_crop_min': 0.0},  # unit is degress
+        {'angle_crop_max': 95.0},  # unit is degress
+        {'range_min': 0.02}, # unit is meter
+        {'range_max': 12.0}   # unit is meter
+      ]
+  )
+
+  # base_link to base_laser tf node
+  base_link_to_laser_tf_node = Node(
+    package='tf2_ros',
+    executable='static_transform_publisher',
+    name='base_link_to_base_laser_ld19',
+    #arguments=['0','0','0.18','0','0','0','base_link','base_laser']
+    arguments=['0.32','-0.2325','0.82','0','0','3.14159','base_link','base_laser'] # LiDAR is currently pointed backwards, this is the base_link -> base_laser TF
+  )
 ```
