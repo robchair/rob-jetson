@@ -273,3 +273,16 @@ a && /z:/{printf "          Wz: %s rad/s\n---\n", $2; a=0}
 ```bash
 ros2 topic echo /odometry/filtered
 ```
+
+# Launch Nav2 Server: 
+
+```bash
+# Terminal 1 base hardware
+ros2 launch wheelchair_bringup mvp.launch.py
+
+# Terminal 2 EKF + IMU
+ros2 launch wheelchair_bringup wheelchair_ekf.launch.py
+
+# Terminal 3 Nav2
+ros2 launch wheelchair_bringup nav2.launch.py map:=/home/rob/pho2.yaml
+```
