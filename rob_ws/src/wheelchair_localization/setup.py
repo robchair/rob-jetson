@@ -26,12 +26,8 @@ setup(
         'console_scripts': [
             'cmdvel_odom = wheelchair_localization.cmdvel_odom:main',
             'encoder_serial_node = wheelchair_localization.encoder_serial_node:main',
-<<<<<<< HEAD
             'encoder_odom = wheelchair_localization.encoder_odom:main',
-            'imu_node= wheelchair_localization.imu_node:main'
-=======
-            'encoder_odom = wheelchair_localization.encoder_odom:main'
->>>>>>> bryan_camera
+            'imu_node = wheelchair_localization.imu_node:main',
         ],
     },
 )
