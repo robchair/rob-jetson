@@ -46,16 +46,18 @@ def generate_launch_description():
         ),
 
         # ── Laser angle crop filter ────────────────────────────────
-        # Subscribes to /scan, crops 0°–95° (wheelchair frame zone),
-        # publishes to /scan_filtered.
+        # Subscribes to /scan, crops 250°–360° (wheelchair frame and user zone),
+        # publishes to /scan_filtered
+        # RPLiDAR A1's 0° is down the centerline of the motor. It is mounted backwards and 
+        # published in the statuc TF to account for this. Angle increases CCW.
         Node(
             package='wheelchair_bringup',
             executable='scan_crop_node',
             name='scan_crop_node',
             output='screen',
             parameters=[{
-                'crop_min_deg': 0.0,
-                'crop_max_deg': 95.0,
+                'crop_min_deg': 265.0,      
+                'crop_max_deg': 360.0,
             }]
         ),
 
@@ -84,9 +86,14 @@ def generate_launch_description():
             executable='static_transform_publisher',
             name='base_to_laser_tf',
             arguments=[
-                '0.32', '-0.2325', '0.82',    # x, y, z  (meters)
-                '0', '0', '3.14159',           # roll, pitch, yaw (radians)
-                'base_link', 'base_laser'      # parent, child
+            '--frame-id', 'base_link',
+            '--child-frame-id', 'base_laser',
+            '--x', '0.267',
+            '--y', '-0.3175',
+            '--z', '0.75',
+            '--roll', '0',
+            '--pitch', '0',
+            '--yaw', '3.14159',
             ]
         ),
 
