@@ -220,3 +220,56 @@ ros2 launch sllidar_ros2 view_sllidar_a1_launch.py
 ```bash
 ros2 launch sllidar_ros2 sllidar_a1_launch.py serial_port:=/dev/rplidar
 ```
+# EKF Localization
+
+## Full EKF launch:(4 Terminals)
+
+## Terminal 1: Arduino Base Driver _(publishes wheel encoder ticks)_
+```bash
+cd ~/rob/rob_ws/src/arduino_base_driver/arduino_base_driver
+python3 arduino_base_driver_node.py
+```
+
+## Terminal 2: EKF launch
+```bash
+cd ~/rob/rob_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+ros2 launch wheelchair_bringup wheelchair_ekf.launch.py debug_calibration:=true
+```
+## Terminal 3:EKF Output 
+```bash
+ros2 topic echo /odometry/filtered
+```
+
+## Terminal 4:Wheel Encoder Ticks
+```bash
+ros2 topic echo /wheel_encoder_ticks
+```
+## EKF Only Launch
+```bash
+ros2 launch wheelchair_bringup EKF.launch.py
+```
+
+## Human Readable Code for the EKF(debugging)
+```bash
+ros2 topic echo /odometry/filtered | awk '
+/position:/{p=1} 
+p && /x:/{printf "Position  X: %s\n", $2; p=0}
+/position:/{p2=1}
+p2 && /y:/{printf "          Y: %s\n", $2; p2=0}
+/orientation:/{o=1}
+o && /z:/{printf "Heading   Z: %s\n", $2}
+o && /w:/{printf "          W: %s\n", $2; o=0}
+/linear:/{l=1}
+l && /x:/{printf "Velocity  Vx: %s m/s\n", $2; l=0}
+/angular:/{a=1}
+a && /z:/{printf "          Wz: %s rad/s\n---\n", $2; a=0}
+'
+```
+
+
+## Echo for EKF output
+```bash
+ros2 topic echo /odometry/filtered
+```
