@@ -18,6 +18,7 @@ def launch_setup(context, *args, **kwargs):
         ('rgb/image',       '/camera/camera/color/image_raw'),
         ('rgb/camera_info', '/camera/camera/color/camera_info'),
         ('depth/image',     '/camera/camera/aligned_depth_to_color/image_raw'),
+        ('odom',            '/odom'),  # wire in wheel encoder odometry
     ]
 
     pkg_share = get_package_share_directory('wheelchair_bringup')
@@ -47,6 +48,7 @@ def launch_setup(context, *args, **kwargs):
             'map_frame_id': 'map',
             'subscribe_depth': True,
             'subscribe_scan': False,
+            'subscribe_odom': True,              # consume wheel odometry
             'database_path': '/home/rob/rob/rob_ws/rtabmap.db',
             'approx_sync': True,
             'approx_sync_max_interval': 0.1,
@@ -59,6 +61,7 @@ def launch_setup(context, *args, **kwargs):
             'Grid/RangeMax': '4.0',
             'Grid/CellSize': '0.05',
             'RGBD/NeighborLinkRefining': 'true',
+            'RGBD/OptimizeFromGraphEnd': 'false', # optimize from first node, more stable
         }],
         remappings=remappings,
     )
