@@ -39,7 +39,7 @@ class BNO055UartNode(Node):
         self.declare_parameter("imu_topic", "/imu/data")
         self.declare_parameter("calib_topic", "/imu/calibration_status")
         self.declare_parameter("frame_id", "imu_link")
-        self.declare_parameter("poll_hz", 20.0)
+        self.declare_parameter("poll_hz", 15.0)         # Originally 20
         
         self.last_calib_pub_time =0.0
 
@@ -81,6 +81,9 @@ class BNO055UartNode(Node):
         self.use_quaternion = bool(self.get_parameter("use_quaternion").value)
         self.publish_linear_accel = bool(self.get_parameter("publish_linear_accel").value)
         self.warn_bad_reads = bool(self.get_parameter("warn_bad_reads").value)
+
+        self.prev_quat = None
+        self.max_yaw_jump_rad = math.radians(30.0)
 
         self.orientation_cov = [
             float(self.get_parameter("orientation_cov_x").value),
@@ -139,13 +142,36 @@ class BNO055UartNode(Node):
         self.ser.write(cmd)
         time.sleep(0.05)
         return self.ser.read(2)
-
+    
     def read_reg(self, reg: int, length: int) -> bytes:
         self.ser.reset_input_buffer()
         cmd = bytes([0xAA, 0x01, reg, length])
         self.ser.write(cmd)
-        time.sleep(0.01)
-        return self.ser.read(length + 2)
+
+        # Read response header: wait for 0xBB then read length byte
+        deadline = time.monotonic() + 0.1  # 100ms timeout
+        while time.monotonic() < deadline:
+            header = self.ser.read(1)
+            if len(header) == 0:
+                continue
+            if header[0] == 0xBB:
+                # Got success header, next byte is length
+                len_byte = self.ser.read(1)
+                if len(len_byte) == 0:
+                    return b''
+                payload_len = len_byte[0]
+                if payload_len != length:
+                    # Length mismatch — corrupt response
+                    return b''
+                payload = self.ser.read(payload_len)
+                if len(payload) != payload_len:
+                    return b''
+                return bytes([0xBB, payload_len]) + payload
+            elif header[0] == 0xEE:
+                # Error response from BNO055
+                err = self.ser.read(1)
+                return b''
+        return b''  # timeout
 
     def check_chip_id(self) -> bool:
         resp = self.read_reg(0x00, 1)
@@ -170,6 +196,7 @@ class BNO055UartNode(Node):
 
         # NDOF mode
         resp = self.write_reg(0x3D, 0x0C)
+        #resp = self.write_reg(0x3D, 0x08) # Try IMU mode instead
         self.get_logger().info(f"Set NDOF mode: {resp!r}")
         time.sleep(0.1)
 
@@ -227,6 +254,41 @@ class BNO055UartNode(Node):
         accel_cal = (calib >> 2) & 0x03
         mag_cal = calib & 0x03
         return (sys_cal, gyro_cal, accel_cal, mag_cal)
+    
+    def read_all_imu_data(self):
+        """Single burst read: gyro(0x14-0x19) + quat(0x20-0x27) + linacc(0x28-0x2D)
+        
+        Note: there's a gap from 0x1A-0x1F (Euler angles) which we read but ignore.
+        Total: 0x14 to 0x2D = 26 bytes.
+        """
+        resp = self.read_reg(0x14, 26)
+        if len(resp) < 28:  # 2 header + 26 data
+            return None, None, None
+
+        data = resp[2:]  # strip 0xBB + length byte
+
+        # Gyro: bytes 0-5 (registers 0x14-0x19)
+        gx_dps = to_signed_16(data[0], data[1]) / 16.0
+        gy_dps = to_signed_16(data[2], data[3]) / 16.0
+        gz_dps = to_signed_16(data[4], data[5]) / 16.0
+        gyro = (math.radians(gx_dps), math.radians(gy_dps), math.radians(gz_dps))
+
+        # bytes 6-11 are Euler angles (0x1A-0x1F) — skip
+
+        # Quaternion: bytes 12-19 (registers 0x20-0x27)
+        w = to_signed_16(data[12], data[13]) / 16384.0
+        x = to_signed_16(data[14], data[15]) / 16384.0
+        y = to_signed_16(data[16], data[17]) / 16384.0
+        z = to_signed_16(data[18], data[19]) / 16384.0
+        quat = (x, y, z, w)
+
+        # Linear accel: bytes 20-25 (registers 0x28-0x2D)
+        ax = to_signed_16(data[20], data[21]) / 100.0
+        ay = to_signed_16(data[22], data[23]) / 100.0
+        az = to_signed_16(data[24], data[25]) / 100.0
+        linacc = (ax, ay, az)
+
+        return quat, gyro, linacc
 
     def publish_calibration_status(self, status: Tuple[int, int, int, int]):
         msg = UInt8MultiArray()
@@ -339,13 +401,42 @@ class BNO055UartNode(Node):
         if not self.calibrated:
                     return
 
-        quat = self.read_quaternion() if self.use_quaternion else None
-        gyro = self.read_gyro()
-        linacc = self.read_linear_accel() if self.publish_linear_accel else None
+        #quat = self.read_quaternion() if self.use_quaternion else None
+        #gyro = self.read_gyro()
+        #linacc = self.read_linear_accel() if self.publish_linear_accel else None
+
+        quat, gyro, linacc = self.read_all_imu_data()
 
         if gyro is None:
-            
             return
+
+        if quat is not None:
+            mag_sq = quat[0]**2 + quat[1]**2 + quat[2]**2 + quat[3]**2
+            if abs(mag_sq - 1.0) > 0.1 or mag_sq < 0.01:
+                self.get_logger().warn(
+                    f"Bad quaternion (mag²={mag_sq:.3f}), skipping frame"
+                )
+                return
+
+            # Temporal consistency: reject impossible yaw jumps
+            if self.prev_quat is not None:
+                # Extract yaw from current and previous quaternion
+                prev_yaw = math.atan2(
+                    2.0 * (self.prev_quat[3] * self.prev_quat[2] + self.prev_quat[0] * self.prev_quat[1]),
+                    1.0 - 2.0 * (self.prev_quat[1]**2 + self.prev_quat[2]**2)
+                )
+                curr_yaw = math.atan2(
+                    2.0 * (quat[3] * quat[2] + quat[0] * quat[1]),
+                    1.0 - 2.0 * (quat[1]**2 + quat[2]**2)
+                )
+                dyaw = abs(math.atan2(math.sin(curr_yaw - prev_yaw), math.cos(curr_yaw - prev_yaw)))
+                if dyaw > self.max_yaw_jump_rad:
+                    self.get_logger().warn(
+                        f"Yaw jump rejected: {math.degrees(dyaw):.1f}° in one frame"
+                    )
+                    return  # don't update prev_quat — wait for next good frame
+
+            self.prev_quat = quat
 
         msg = Imu()
         msg.header.stamp = self.get_clock().now().to_msg()
