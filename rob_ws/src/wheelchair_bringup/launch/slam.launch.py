@@ -25,11 +25,11 @@ def generate_launch_description():
             name='ldlidar_node',
             output='screen',
             parameters=[
-                {'product_name': 'LDLiDAR_LD06'},
-                {'topic_name': 'scan'},
+                {'product_name': 'LDLiDAR_LD14'},
+                {'laser_scan_topic_name': 'scan'},
                 {'frame_id': frame_id},
                 {'port_name': serial_port},
-                {'port_baudrate': 230400}, # LD06 default
+                {'serial_baudrate': 115200}, 
                 {'laser_scan_dir': True},
                 {'enable_angle_crop_func': False}
             ]
