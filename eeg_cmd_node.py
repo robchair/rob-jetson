@@ -85,21 +85,41 @@ class EegCmdNode(Node):
         self.enabled = msg.data
         self.get_logger().info(f'EEG {"ENABLED" if self.enabled else "DISABLED"} via /eeg_enabled')
 
+#    def connect_streams(self):
+#        self.get_logger().info('Looking for MUSE LSL streams...')
+#        streams = resolve_streams()
+#        for s in streams:
+#            if s.type() == 'ACC' and self.acc_inlet is None:
+#                self.acc_inlet = StreamInlet(s)
+#                self.get_logger().info('Connected to ACC stream')
+#            elif s.type() == 'EEG' and self.eeg_inlet is None:
+#                self.eeg_inlet = StreamInlet(s)
+#                self.get_logger().info('Connected to EEG stream')
+#        if self.acc_inlet is None:
+#            self.get_logger().error('No ACC stream found! Is muselsl stream --acc running?')
+#            raise RuntimeError('No ACC stream')
+#        status = Bool(); status.data = True
+#        self.status_pub.publish(status)
+
     def connect_streams(self):
         self.get_logger().info('Looking for MUSE LSL streams...')
-        streams = resolve_streams()
-        for s in streams:
-            if s.type() == 'ACC' and self.acc_inlet is None:
-                self.acc_inlet = StreamInlet(s)
-                self.get_logger().info('Connected to ACC stream')
-            elif s.type() == 'EEG' and self.eeg_inlet is None:
-                self.eeg_inlet = StreamInlet(s)
-                self.get_logger().info('Connected to EEG stream')
-        if self.acc_inlet is None:
-            self.get_logger().error('No ACC stream found! Is muselsl stream --acc running?')
-            raise RuntimeError('No ACC stream')
-        status = Bool(); status.data = True
-        self.status_pub.publish(status)
+        max_attempts = 20
+        for attempt in range(max_attempts):
+            streams = resolve_streams(wait_time=2.0)
+            for s in streams:
+                if s.type() == 'ACC' and self.acc_inlet is None:
+                    self.acc_inlet = StreamInlet(s)
+                    self.get_logger().info('Connected to ACC stream')
+                elif s.type() == 'EEG' and self.eeg_inlet is None:
+                    self.eeg_inlet = StreamInlet(s)
+                    self.get_logger().info('Connected to EEG stream')
+            if self.acc_inlet is not None:
+                status = Bool(); status.data = True
+                self.status_pub.publish(status)
+                return
+            self.get_logger().warn(f'No ACC stream yet, retrying ({attempt+1}/{max_attempts})...')
+        self.get_logger().error('No ACC stream found after retries!')
+        raise RuntimeError('No ACC stream')
 
     def calibrate(self):
         self.get_logger().info('Calibrating ACC... hold head still in neutral position')

@@ -36,20 +36,20 @@ def generate_launch_description():
 #            ],
 #            output="screen",
 #        ),
-        #ExecuteProcess(
-        #    cmd=["muselsl", "stream", "--acc"],
-        #    output="screen",
-        #),
+        ExecuteProcess(
+            cmd=["muselsl", "stream", "--acc"],
+            output="screen",
+        ),
         # 3) EEG -> /cmd_vel_eeg
-        #TimerAction(
-        #    period=10.0,
-        #    actions=[
-        #        ExecuteProcess(
-        #            cmd=[venv_python, eeg_script],
-        #            output="screen",
-        #        ),
-        #    ]
-        #),
+        TimerAction(
+            period=10.0,
+            actions=[
+                ExecuteProcess(
+                    cmd=[venv_python, eeg_script],
+                    output="screen",
+                ),
+            ]
+        ),
         # 4) Twist mux -> /cmd_vel_raw
         Node(
             package="twist_mux",

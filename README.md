@@ -110,8 +110,8 @@ ros2 run wheelchair_localization encoder_odom \
   --ros-args \
   -p encoder_topic:=/wheel_encoder_ticks \
   -p odom_topic:=/odom \
-  -p wheel_radius_m:=0.29 \
-  -p wheel_base_m:=0.54 \
+  -p wheel_radius_m:=0.305 \
+  -p wheel_base_m:=0.515 \
   -p ticks_per_rev:=1199.67 \
   -p left_sign:=1.0 \
   -p right_sign:=-1.0
@@ -136,8 +136,7 @@ Launch SLAM toolbox:
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/rob/rob_ws/install/setup.bash
-ros2 launch slam_toolbox online_async_launch.py \ 
-slam_params_file:=/home/rob/rob/rob_ws/src/wheelchair_bringup/config/slam_toolbox.yaml
+ros2 launch slam_toolbox online_async_launch.py slam_params_file:=/home/rob/rob/rob_ws/src/wheelchair_bringup/config/slam_toolbox.yaml
 ```
 
 Launch the following to verify live TF:
