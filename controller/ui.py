@@ -69,6 +69,16 @@ class ManualPage(QWidget):
         self.angular = DEFAULT_ANGULAR
         self._build()
 
+        self._current_linear  = 0.0
+        self._current_angular = 0.0
+
+        self._hold_timer = __import__('PyQt5.QtCore', fromlist=['QTimer']).QTimer()
+        self._hold_timer.setInterval(100)  # 10Hz
+        self._hold_timer.timeout.connect(self._republish)
+
+    def _republish(self):
+        self.ros.publish_twist(self._current_linear, self._current_angular)
+
     def _ctrl_btn(self, label, size=100, font_size=26, stop=False):
         btn = QPushButton(label)
         btn.setFixedSize(size, size)
@@ -92,6 +102,18 @@ class ManualPage(QWidget):
                 }
             """)
         return btn
+    
+    def _start_hold(self, linear, angular):
+        self._current_linear  = linear
+        self._current_angular = angular
+        self.ros.publish_twist(linear, angular)
+        self._hold_timer.start()
+
+    def _stop_hold(self):
+        self._hold_timer.stop()
+        self._current_linear  = 0.0
+        self._current_angular = 0.0
+        self.ros.publish_twist(0.0, 0.0)
 
     def _speed_btn(self, label):
         btn = QPushButton(label)
@@ -147,8 +169,8 @@ class ManualPage(QWidget):
         for (row, col), key in GRID.items():
             btn = self._ctrl_btn(LABELS[key], stop=(key == "k"))
             lin, ang = BINDINGS[key]
-            btn.pressed.connect(lambda l=lin, a=ang: self.ros.publish_twist(l, a))
-            btn.released.connect(lambda: self.ros.publish_twist(0.0, 0.0))
+            btn.pressed.connect(lambda l=lin, a=ang: self._start_hold(l, a))
+            btn.released.connect(self._stop_hold)
             grid.addWidget(btn, row, col)
         main_row.addWidget(grid_widget, alignment=Qt.AlignCenter)
 
