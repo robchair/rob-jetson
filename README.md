@@ -150,7 +150,38 @@ ros2 run wheelchair_localization encoder_odom \
   -p odom_topic:=/odom \
   -p wheel_radius_m:=0.15 \
   -p wheel_base_m:=0.60 \
-  -p ticks_per_rev:=600.0 \
+  -p ticks_per_rev:=1203.0 \
   -p left_sign:=1.0 \
   -p right_sign:=1.0
+```
+
+#### Launch static TF for LiDAR:
+
+Note: change to real mounting points when sensors are mounted.
+
+```bash
+ros2 run tf2_ros static_transform_publisher \
+  --x 0.00 --y 0.00 --z 0.20 \
+  --roll 0.0 --pitch 0.0 --yaw 0.0 \
+  --frame-id base_link \
+  --child-frame-id base_laser
+```
+
+x y z: the sensor’s position relative to base_link, in meters
+roll pitch yaw: the sensor’s orientation relative to base_link, in radian
+
+#### Launch static TF for ultrasonic:
+
+```bash
+ros2 run tf2_ros static_transform_publisher \
+  --x 0.25 --y 0.00 --z 0.10 \
+  --roll 0.0 --pitch 0.0 --yaw 0.0 \
+  --frame-id base_link \
+  --child-frame-id ultrasonic_link
+  ```
+
+Launch SLAM toolbox, then launch the following to verify live TF:
+
+```bash
+ros2 run tf2_tools view_frames
 ```

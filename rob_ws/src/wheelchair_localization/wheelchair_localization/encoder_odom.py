@@ -101,7 +101,7 @@ class EncoderOdom(Node):
         right = int(self.right_sign * right)
 
         #now_ros = time.time()
-        now_ros = self.get_clock().now().nanosecods * 1e-9      # use ROS /clock instead of OS clock
+        now_ros = self.get_clock().now().nanoseconds * 1e-9      # use ROS /clock instead of OS clock
 
         if self.prev_left is None:
             self.prev_left = left
