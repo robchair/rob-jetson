@@ -83,7 +83,7 @@ class BNO055UartNode(Node):
         self.warn_bad_reads = bool(self.get_parameter("warn_bad_reads").value)
 
         self.prev_quat = None
-        self.max_yaw_jump_rad = math.radians(30.0)
+        self.max_yaw_jump_rad = math.radians(45.0)      # Was 30
 
         self.orientation_cov = [
             float(self.get_parameter("orientation_cov_x").value),
@@ -180,32 +180,37 @@ class BNO055UartNode(Node):
         return ok
 
     def configure_sensor(self):
-        # CONFIG mode
+        # System reset for clean state
+        self.get_logger().info("Resetting BNO055...")
+        self.write_reg(0x3F, 0x20)  # SYS_TRIGGER: RST_SYS bit
+        time.sleep(0.7)  # Wait for reset (~650ms per datasheet)
+
+        # Verify chip is back
+        if not self.check_chip_id():
+            self.get_logger().error("Chip ID check failed after reset")
+
+        # CONFIG mode (required to change settings)
         resp = self.write_reg(0x3D, 0x00)
         self.get_logger().info(f"Set CONFIG mode: {resp!r}")
         time.sleep(0.05)
 
-        # UNIT_SEL = 0x00
-        # Orientation: Android
-        # Euler: degrees
-        # Gyro: degrees/sec
-        # Accel: m/s^2
+        # UNIT_SEL: Android orientation, deg, deg/s, m/s^2
         resp = self.write_reg(0x3B, 0x00)
         self.get_logger().info(f"Set UNIT_SEL: {resp!r}")
         time.sleep(0.05)
 
-        # NDOF mode
-        resp = self.write_reg(0x3D, 0x0C)
-        #resp = self.write_reg(0x3D, 0x08) # Try IMU mode instead
-        self.get_logger().info(f"Set NDOF mode: {resp!r}")
+        # IMU mode — gyro + accel only, NO magnetometer
+        # This avoids magnetic interference from wheelchair motors/frame
+        resp = self.write_reg(0x3D, 0x08)
+        self.get_logger().info(f"Set IMU mode: {resp!r}")
         time.sleep(0.1)
 
     def save_calibration(self, path: str):
         # Must be in CONFIG mode to read offsets
-        self.write_reg(0x3D, 0x00)
+        self.write_reg(0x3D, 0x00)  # CONFIG mode
         time.sleep(0.05)
         resp = self.read_reg(0x55, 22)
-        self.write_reg(0x3D, 0x0C)
+        self.write_reg(0x3D, 0x08)  # IMU mode (was 0x0C NDOF)
         time.sleep(0.1)
         if len(resp) < 24 or resp[0] != 0xBB or resp[1] != 0x16:
             self.get_logger().error("Failed to read calibration offsets")
@@ -234,7 +239,7 @@ class BNO055UartNode(Node):
         for i, val in enumerate(offsets):
             self.write_reg(0x55 + i, val)
             time.sleep(0.01)
-        self.write_reg(0x3D, 0x0C)
+        self.write_reg(0x3D, 0x08)  # IMU mode (was 0x0C NDOF
         time.sleep(0.1)
         self.get_logger().info(f"Calibration loaded from {path}")
         return True

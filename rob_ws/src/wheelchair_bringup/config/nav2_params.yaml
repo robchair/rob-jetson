@@ -188,8 +188,6 @@ lifecycle_manager:
   ros__parameters:
     autostart: true
     node_names:
-      - map_server
-      - amcl
       - controller_server
       - planner_server
       - behavior_server
