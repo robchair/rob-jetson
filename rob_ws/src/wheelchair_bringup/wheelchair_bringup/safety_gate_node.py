@@ -69,11 +69,13 @@ class SafetyGate(Node):
 
         # If blocked latch is active, block
         if now < self._blocked_until:
-            return True
+            #return True
+            return False
 
         # If we have a valid range and it's within stop threshold, block
         if self._last_range_m is not None and self._last_range_m <= self.stop_d:
-            return True
+            #return True
+            return False
 
         return False
 

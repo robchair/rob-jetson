@@ -78,9 +78,6 @@ class ArduinoBaseDriver(Node):
         # --- Subscriber ---
         self.sub = self.create_subscription(Twist, "/cmd_vel_safe", self.on_cmd_vel, 10)
 
-        # --- Watchdog timer ---
-        self.timer = self.create_timer(0.2, self.watchdog)
-
         # --- Serial reader thread ---
         self._reader_alive = True
         self.reader_thread = threading.Thread(target=self.read_serial_loop, daemon=True)
@@ -91,25 +88,31 @@ class ArduinoBaseDriver(Node):
             f"base={self.wheel_base}m, max_pwm={self.max_pwm}"
         )
 
+        # Ramping state
+        self._target_left_pwm = 0
+        self._target_right_pwm = 0
+        self._current_left_pwm = 0
+        self._current_right_pwm = 0
+        self._last_ramp_time = time.monotonic() 
+
+        # Ramp rate: PWM units per second
+        # 150 PWM/s means reaching 60 PWM in 0.4s — smooth for keyboard,
+        # transparent for Nav2 since Nav2's own ramp produces small
+        # deltas between 200ms command cycles
+        self._ramp_rate = 150.0
+
+        # Replace the watchdog timer with a combined ramp+send timer
+        # Running at 20Hz gives smooth ramping
+        self.timer = self.create_timer(0.05, self._ramp_and_send)
+
     # ------------------------------------------------------------------ #
     #  Twist → PWM conversion                                             #
     # ------------------------------------------------------------------ #
+
     def twist_to_pwm(self, linear_x: float, angular_z: float):
-        """
-        Differential drive kinematics:
-          v_left  = linear_x - (angular_z * wheel_base / 2)
-          v_right = linear_x + (angular_z * wheel_base / 2)
-
-        Then scale wheel velocities to PWM proportionally.
-
-        Note: left motor is inverted mechanically on the wheelchair,
-        so we negate left PWM. This matches the encoder_odom convention
-        where left_sign = -1.0.
-        """
         v_left = linear_x - (angular_z * self.wheel_base / 2.0)
         v_right = linear_x + (angular_z * self.wheel_base / 2.0)
 
-        # Scale to PWM: map max_wheel_speed → max_pwm
         if self.max_wheel_speed > 0:
             left_pwm = int(round((v_left / self.max_wheel_speed) * self.max_pwm))
             right_pwm = int(round((v_right / self.max_wheel_speed) * self.max_pwm))
@@ -117,20 +120,17 @@ class ArduinoBaseDriver(Node):
             left_pwm = 0
             right_pwm = 0
 
-        # Clamp
         left_pwm = max(-self.max_pwm, min(self.max_pwm, left_pwm))
         right_pwm = max(-self.max_pwm, min(self.max_pwm, right_pwm))
 
-        # Dead zone: PWM values too low to move the wheelchair just
-        # create heat and buzzing. Zero them out.
-        PWM_DEADZONE = 15               # Tune this if needed
+        PWM_DEADZONE = 15
         if abs(left_pwm) < PWM_DEADZONE:
             left_pwm = 0
         if abs(right_pwm) < PWM_DEADZONE:
             right_pwm = 0
 
-        # Invert left to match motor wiring (left motor spins opposite)
-        left_pwm = -left_pwm
+        # Invert RIGHT to match motor wiring
+        right_pwm = -right_pwm
 
         return left_pwm, right_pwm
 
@@ -149,31 +149,83 @@ class ArduinoBaseDriver(Node):
         self._current_left_pwm = left
         self._current_right_pwm = right
 
+    def _ramp_toward(self, current: float, target: int, max_step: float) -> float:
+        if current < target:
+            current += max_step
+            if current > target:
+                current = target
+        elif current > target:
+            current -= max_step
+            if current < target:
+                current = target
+        return current
+
+    def _ramp_and_send(self):
+        now = time.monotonic()
+
+        # Watchdog: if no cmd_vel received recently, target zero
+        if (now - self._last_cmd_time) > self.cmd_timeout:
+            self._target_left_pwm = 0
+            self._target_right_pwm = 0
+            if self._current_left_pwm == 0 and self._current_right_pwm == 0:
+                # Already stopped — just send keepalive periodically
+                if (now - self._last_sent_time) > 0.2:
+                    self.send_pwm(0, 0)
+                return
+
+        # Compute ramp step for this cycle
+        dt = now - self._last_ramp_time
+        self._last_ramp_time = now
+        max_step = self._ramp_rate * dt
+
+        # Ramp current toward target
+        new_left = self._ramp_toward(
+            float(self._current_left_pwm), self._target_left_pwm, max_step
+        )
+        new_right = self._ramp_toward(
+            float(self._current_right_pwm), self._target_right_pwm, max_step
+        )
+
+        left_out = int(round(new_left))
+        right_out = int(round(new_right))
+
+        # Only send if values changed or keepalive needed
+        if (left_out != self._current_left_pwm or
+            right_out != self._current_right_pwm or
+            (now - self._last_sent_time) > 0.2):
+            self.send_pwm(left_out, right_out)
+
+        self._current_left_pwm = left_out
+        self._current_right_pwm = right_out
+
     # ------------------------------------------------------------------ #
     #  cmd_vel callback                                                    #
     # ------------------------------------------------------------------ #
+
     def on_cmd_vel(self, msg: Twist):
         self._last_cmd_time = time.monotonic()
-
         left_pwm, right_pwm = self.twist_to_pwm(msg.linear.x, msg.angular.z)
-        self.send_pwm(left_pwm, right_pwm)
+        # Only set targets — the ramp timer handles actual sending
+        self._target_left_pwm = left_pwm
+        self._target_right_pwm = right_pwm
 
-    # ------------------------------------------------------------------ #
-    #  Watchdog                                                            #
-    # ------------------------------------------------------------------ #
-    def watchdog(self):
-        now = time.monotonic()
 
-        if (now - self._last_cmd_time) > self.cmd_timeout:
-            if self._current_left_pwm != 0 or self._current_right_pwm != 0:
-                self.send_pwm(0, 0)
-                self.get_logger().info("Navigation timeout -> stop")
-            return
+    # # ------------------------------------------------------------------ #
+    # #  Watchdog                                                            #
+    # # ------------------------------------------------------------------ #
+    # def watchdog(self):
+    #     now = time.monotonic()
 
-        # Keepalive: resend current PWM every 200ms so Arduino watchdog
-        # doesn't trigger
-        if (now - self._last_sent_time) > 0.2:
-            self.send_pwm(self._current_left_pwm, self._current_right_pwm)
+    #     if (now - self._last_cmd_time) > self.cmd_timeout:
+    #         if self._current_left_pwm != 0 or self._current_right_pwm != 0:
+    #             self.send_pwm(0, 0)
+    #             self.get_logger().info("Navigation timeout -> stop")
+    #         return
+
+    #     # Keepalive: resend current PWM every 200ms so Arduino watchdog
+    #     # doesn't trigger
+    #     if (now - self._last_sent_time) > 0.2:
+    #         self.send_pwm(self._current_left_pwm, self._current_right_pwm)
 
     # ------------------------------------------------------------------ #
     #  Serial reader thread                                                #
