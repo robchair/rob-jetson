@@ -86,7 +86,7 @@ In another terminal run:
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/rob/rob_ws/install/setup.bash
-ros2 run tf2_ros tf2_echo base_link base_laser
+#ros2 run tf2_ros tf2_echo base_link base_laser
 
 # OR (better)
 
