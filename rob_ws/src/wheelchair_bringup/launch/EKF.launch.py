@@ -3,7 +3,7 @@
 wheelchair_ekf.launch.py
 
 Starts the full EKF sensor-fusion stack:
-  1. ArduinoBaseDriver        -> /wheel_encoder_ticks, /ultrasonic/range
+  1. ArduinoBaseDriver        -> /wheel_encoder_ticks, /ultrasonic/range(removed as owned by mvp)
   2. EncoderOdom              -> /wheel/odom  (TF disabled — EKF owns odom->base_link)
   3. BNO055UartNode           -> /imu/data
   4. Static TF: base_link -> imu_link  (required for robot_localization to accept IMU)
@@ -34,7 +34,7 @@ def generate_launch_description():
     # ------------------------------------------------------------------ #
     imu_port_arg = DeclareLaunchArgument(
         "imu_port",
-        default_value="/dev/ttyUSB0",
+        default_value="/dev/ttyIMU",
         description="Serial port for BNO055 IMU",
     )
     # Set true to lower calibration thresholds for initial bringup/debugging
@@ -122,7 +122,7 @@ def generate_launch_description():
         executable="static_transform_publisher",
         name="static_tf_base_to_imu",
         arguments=[#Update values based on the mounting of the IMU onto the chair 
-            "-0.065",  "0.0",  "0.05",   # x  y  z  (meters from base_link origin)
+            "-0.065",  "0.0",  "0.75",   # x  y  z  (meters from base_link origin)
             "0.0",  "0.0",  "0.0",    # roll pitch yaw (radians)
             "base_link",
             "imu_link",

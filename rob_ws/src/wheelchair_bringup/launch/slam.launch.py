@@ -36,7 +36,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'channel_type': 'serial',
-                'serial_port': '/dev/rplidar',   # udev symlink (fall back to /dev/ttyUSB0)
+                'serial_port': '/dev/ttyLIDAR',   # udev symlink (fall back to /dev/ttyUSB0)
                 'serial_baudrate': 115200,
                 'frame_id': 'base_laser',
                 'inverted': False,
@@ -61,22 +61,22 @@ def generate_launch_description():
             }]
         ),
 
-        # ── Encoder odometry ──────────────────────────────────────
-        Node(
-            package='wheelchair_localization',
-            executable='encoder_odom',
-            name='encoder_odom',
-            output='screen',
-            parameters=[{
-                'encoder_topic': '/wheel_encoder_ticks',
-                'odom_topic': '/odom',
-                'wheel_radius_m': 0.305,
-                'wheel_base_m': 0.515,
-                'ticks_per_rev': 1199.67,
-                'left_sign': 1.0,
-                'right_sign': -1.0,
-            }]
-        ),
+#        # ── Encoder odometry ──────────────────────────────────────
+#        Node(
+#            package='wheelchair_localization',
+#            executable='encoder_odom',
+#            name='encoder_odom',
+#            output='screen',
+#            parameters=[{
+#                'encoder_topic': '/wheel_encoder_ticks',
+#                'odom_topic': '/odom',
+#                'wheel_radius_m': 0.305,
+#                'wheel_base_m': 0.515,
+#                'ticks_per_rev': 1199.67,
+#                'left_sign': 1.0,
+#                'right_sign': -1.0,
+#            }]
+#        ),
 
         # ── Static TF: base_link → base_laser ─────────────────────
         # TODO: Measure actual RPLiDAR A1 mounting position on wheelchair

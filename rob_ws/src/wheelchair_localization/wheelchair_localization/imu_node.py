@@ -34,7 +34,7 @@ class BNO055UartNode(Node):
         super().__init__("bno055_uart_node")
 
         # ---------------- Parameters ---------------- #
-        self.declare_parameter("port", "/dev/ttyUSB0")
+        self.declare_parameter("port", "/dev/ttyIMU")
         self.declare_parameter("baud", 115200)
         self.declare_parameter("imu_topic", "/imu/data")
         self.declare_parameter("calib_topic", "/imu/calibration_status")

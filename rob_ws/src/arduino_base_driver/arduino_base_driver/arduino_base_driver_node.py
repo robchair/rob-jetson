@@ -22,7 +22,7 @@ class ArduinoBaseDriver(Node):
         super().__init__("arduino_base_driver")
 
         # --- Parameters ---
-        self.declare_parameter("port",                  "/dev/ttyACM0")
+        self.declare_parameter("port",                  "/dev/ttyARDUINO") # symlink... fall back to /dev/ttyACM0
         self.declare_parameter("baud",                  115200)
         self.declare_parameter("linear_deadband",       0.05)
         self.declare_parameter("angular_deadband",      0.10)
@@ -74,8 +74,11 @@ class ArduinoBaseDriver(Node):
     def send(self, cmd: str):
         line = (cmd.strip() + "\n").encode("utf-8")
         with self._lock:
-            self.ser.write(line)
-            self.ser.flush()
+            try:
+                self.ser.write(line)
+                self.ser.flush()
+            except Exception as e:
+                self.get_logger().warn(f"Serial write error: {e}")
         self._last_sent_time = time.monotonic()
 
     def send_if_changed(self, cmd: str):
@@ -131,8 +134,9 @@ class ArduinoBaseDriver(Node):
     def read_serial_loop(self):
         while self._reader_alive and rclpy.ok():
             try:
-                with self._lock:
-                    line = self.ser.readline().decode("utf-8", errors="ignore").strip()
+                # Do NOT hold the lock during readline — it blocks
+                # and would prevent writes from going through
+                line = self.ser.readline().decode("utf-8", errors="ignore").strip()
 
                 if not line:
                     continue
@@ -142,7 +146,6 @@ class ArduinoBaseDriver(Node):
                     try:
                         dist_cm = float(line.split(",", 1)[1])
                         dist_m  = dist_cm / 100.0
-
                         msg = Range()
                         msg.header.stamp    = self.get_clock().now().to_msg()
                         msg.header.frame_id = self.ultra_frame
@@ -165,7 +168,6 @@ class ArduinoBaseDriver(Node):
                         self.encoder_pub.publish(msg)
                     else:
                         self.get_logger().warn(f"Bad ENC line: {line}")
-
             except Exception as e:
                 self.get_logger().warn(f"Serial read error: {e}")
                 time.sleep(0.1)

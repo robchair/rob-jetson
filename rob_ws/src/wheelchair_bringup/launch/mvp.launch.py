@@ -54,7 +54,7 @@ def generate_launch_description():
             name="arduino_base_driver",
             output="screen",
             parameters=[
-                {"port": "/dev/ttyACM0"},
+                {"port": "/dev/ttyARDUINO"},
                 {"baud": 115200},
                 {"cmd_timeout_sec": 0.5},
             ],
