@@ -258,7 +258,7 @@ class BNO055UartNode(Node):
         gx_dps = to_signed_16(resp[2], resp[3]) / 16.0
         gy_dps = to_signed_16(resp[4], resp[5]) / 16.0
         gz_dps = to_signed_16(resp[6], resp[7]) / 16.0
-        print("Raw gyro response:",resp)
+        #print("Raw gyro response:",resp)
         return (
             math.radians(gx_dps),
             math.radians(gy_dps),

@@ -68,11 +68,11 @@ def generate_launch_description():
             "base_frame":     "base_link",
             "odom_frame":     "odom",
             "publish_tf":     False,          # EKF owns this TF
-            "wheel_radius_m": 0.15,
-            "wheel_base_m":   0.60,
-            "ticks_per_rev":  1200.0,
+            "wheel_radius_m": 0.305,
+            "wheel_base_m":   0.515,
+            "ticks_per_rev":  1199.67,
             "left_sign":      1.0,
-            "right_sign":     1.0,
+            "right_sign":     -1.0,
         }],
     )
 
