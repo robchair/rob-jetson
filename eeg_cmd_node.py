@@ -31,7 +31,7 @@ class EegCmdNode(Node):
         self.declare_parameter('y_neutral', 0.18)
         self.declare_parameter('attention_threshold', 0.5)
         self.declare_parameter('publish_rate', 20.0)
-        self.declare_parameter('use_attention_gate', True)
+        self.declare_parameter('use_attention_gate', False)  # disabled: ACC-only mode
 
         self.max_linear   = self.get_parameter('max_linear_speed').value
         self.max_angular  = self.get_parameter('max_angular_speed').value
@@ -44,6 +44,11 @@ class EegCmdNode(Node):
 
         # --- Enabled flag (controlled by UI via /eeg_enabled) ---
         self.enabled = False
+
+        # --- Connection health tracking ---
+        self.missed_samples = 0
+        self.MISS_LIMIT = 20  # ~1 second at 20Hz before declaring disconnected
+        self.is_connected = True
 
         # --- Publishers ---
         self.publisher   = self.create_publisher(Twist, '/cmd_vel_eeg', 10)
@@ -60,12 +65,19 @@ class EegCmdNode(Node):
         # --- EEG buffer for attention calculation ---
         self.eeg_buffer = deque(maxlen=256)
 
+        # --- Connection health tracking ---
+        self.missed_samples = 0
+        self.MISS_LIMIT = 20  # ~1 second at 20Hz before declaring disconnected
+        self.is_connected = True
+
         # --- Calibration ---
         self.x_baseline = 0.0
         self.y_baseline = self.y_neutral
         self.calibrate()
 
         # --- Timer loop ---
+        self._last_stream_check = time.time()
+        self._stream_check_interval = 2.0  # check every 2 seconds
         self.timer = self.create_timer(1.0 / rate, self.timer_callback)
         self.get_logger().info('EEG CMD Node started (disabled until UI enables it)')
 
@@ -129,13 +141,36 @@ class EegCmdNode(Node):
         return min((beta_power / alpha_power) / 3.0, 1.0)
 
     def timer_callback(self):
+        # Periodically verify the stream is still alive via resolve_streams()
+        now = time.time()
+        if now - self._last_stream_check >= self._stream_check_interval:
+            self._last_stream_check = now
+            active = [s.type() for s in resolve_streams(wait_time=0.5)]
+            if 'ACC' not in active:
+                if self.is_connected:
+                    self.is_connected = False
+                    self.get_logger().warn('ACC stream lost — headset disconnected?')
+                    status = Bool(); status.data = False
+                    self.status_pub.publish(status)
+                if self.enabled:
+                    self.publisher.publish(Twist())
+                return
+            elif not self.is_connected:
+                self.is_connected = True
+                self.get_logger().info('ACC stream restored')
+
         # Drain ACC samples regardless so the buffer stays fresh
+        # Use a short timeout so a dead stream returns None instead of hanging
         acc_sample = None
-        while True:
-            sample, _ = self.acc_inlet.pull_sample(timeout=0.0)
-            if sample is None:
-                break
+        sample, _ = self.acc_inlet.pull_sample(timeout=0.05)
+        if sample is not None:
             acc_sample = sample
+            # Drain any remaining buffered samples, keep latest
+            while True:
+                s, _ = self.acc_inlet.pull_sample(timeout=0.0)
+                if s is None:
+                    break
+                acc_sample = s
 
         # Drain EEG samples into buffer
         if self.eeg_inlet:
@@ -150,8 +185,24 @@ class EegCmdNode(Node):
             return
 
         if acc_sample is None:
+            self.missed_samples += 1
+            if self.missed_samples >= self.MISS_LIMIT and self.is_connected:
+                self.is_connected = False
+                self.get_logger().warn('ACC stream lost — headset disconnected?')
+                status = Bool(); status.data = False
+                self.status_pub.publish(status)
             self.publisher.publish(Twist())
             return
+
+        # Stream is alive
+        if not self.is_connected:
+            self.is_connected = True
+            self.get_logger().info('ACC stream restored')
+        self.missed_samples = 0
+
+        # Republish connected status every cycle so late-joining UI picks it up
+        status = Bool(); status.data = True
+        self.status_pub.publish(status)
 
         msg = Twist()
         x = acc_sample[0] - self.x_baseline
