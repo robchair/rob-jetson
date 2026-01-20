@@ -1,0 +1,13 @@
+
+For the keyboard control, run:
+python -m controller.keyboard_control
+
+For the voice control, run:
+
+cd ~/rob/rob
+source roboVoice/venv/bin/activate
+python -m controller.main_controller
+
+Voice control perfectly working!!
+from /controller run:
+python main_controller.py

@@ -1,0 +1,12 @@
+faster-whisper
+torch
+torchaudio
+sounddevice
+numpy
+scipy
+rapidfuzz
+pyyaml
+silero-vad==5.1
+requests
+soundfile
+torchcodec

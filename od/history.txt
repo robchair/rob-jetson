@@ -1,0 +1,168 @@
+    1  ls
+    2  ip addr
+    3  hostname -I
+    4  mkdir ~/rob
+    5  ls
+    6  ros2 --version
+    7  cd rob
+    8  cd ~/rob
+    9  mkdir -p lidar_ros2_ws/src
+   10  cd lidar_ros2_ws/src
+   11  ls
+   12  git clone https://github.com/ldrobotSensorTeam/ldlidar_sl_ros2.git
+   13  git clone https://gitee.com/ldrobotSensorTeam/ldlidar_sl_ros2.git
+   14  git clone https://github.com/ldrobotSensorTeam/ldlidar_sl_ros2.git
+   15  sudo apt update
+   16  date
+   17  sudo date -s "2025-02-14 10:30:00"
+   18  sudo timedatectl set-ntp true
+   19  timedatectl status
+   20  sudo timedatectl set-ntp true
+   21  timedatectl status
+   22  date
+   23  ping -c 3 time.google.com
+   24  sudo systemctl stop systemd-timesyncd
+   25  sudo systemctl disable systemd-timesyncd
+   26  sudo systemctl enable systemd-timesyncd
+   27  sudo systemctl start systemd-timesyncd
+   28  timedatectl status
+   29  sudo apt update
+   30  date
+   31  sudo date -s "2025-11-14 10:36:00"
+   32  date
+   33  sudo apt update
+   34  ps aux | grep apt
+   35  sudo kill -9 16088 16092 16120 17038
+   36  ps aux | grep apt
+   37  sudo apt update
+   38  sudo apt upgrade -y
+   39  sudo apt install ca-certificates
+   40  sudo update-ca-certificates
+   41  cd ~/rob/lidar_ros2_ws/src
+   42  git clone https://github.com/ldrobotSensorTeam/ldlidar_sl_ros2.git
+   43  source install/setup.bash
+   44  echo "source ~/rob/lidar_ros2_ws/install/setup.bash" >> ~/.bashrc
+   45  source ~/.bashrc
+   46  ls
+   47  colcon build
+   48  sudo apt update
+   49  sudo apt install software-properties-common
+   50  sudo add-apt-repository universe
+   51  sudo apt update
+   52  sudo apt install ros-humble-desktop
+   53  sudo apt install -y software-properties-common curl gnupg lsb-release
+   54  sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+   55  ls /usr/share/keyrings/ros-archive-keyring.gpg
+   56  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+   57  sudo apt update
+   58  sudo apt install ros-humble-desktop
+   59  echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+   60  source ~/.bashrc
+   61  ros2 --version
+   62  ros2
+   63  ros2 doctor --report
+   64  ls
+   65  src/
+   66  ls /dev/ttyUSB*
+   67  sudo chmod 777 /dev/ttyusb *
+   68  sudo chmod 777 /dev/ttyusb*
+   69  sudo chmod 777 /dev/ttyUSB*
+   70  $ nano ~/ldlidar_ros2_ws/src/ldldiar_sl_ros2/launch/ld14.launch.py
+   71  nano ~/ldlidar_ros2_ws/src/ldldiar_sl_ros2/launch/ld14.launch.py
+   72  ~/rob/lidar_ros2_ws
+   73  ls
+   74  ~/rob/lidar_ros2_ws
+   75  cd
+   76  cd rob
+   77  ls
+   78  cd lidar_ros2_ws
+   79  ls
+   80  sudo apt install nanonano ~/ldlidar_ros2_ws/src/ldldiar_sl_ros2/launch/ld14.launch.py
+   81  nano ~/ldlidar_ros2_ws/src/ldldiar_sl_ros2/launch/ld14.launch.py
+   82  colcon build
+   83  ls
+   84  sudo apt install python3-colcon-common-extensions
+   85  colcon --help
+   86  ~/rob/lidar_ros2_ws
+   87  cd ~/rob/lidar_ros2_ws
+   88  ls
+   89  colcon build
+   90  ls
+   91  source install/setup.bash
+   92  echo "source ~/rob/lidar_ros2_ws/install/setup.bash" >> ~/.bashrc
+   93  source ~/.bashrc
+   94  nano ~/rob/lidar_ros2_ws/src/ldlidar_sl_ros2/launch/ld14.launch.py
+   95  ros2 launch ldlidar_sl_ros2 ld14.launch.py
+   96  rviz2
+   97  cd rob
+   98  cd ..
+   99  cd rob
+  100  rviz2
+  101  cd rob
+  102  ls
+  103  cd ..
+  104  cd rob
+  105  cd lidar_ros2_ws
+  106  ls
+  107  ros2 launch ldlidar_sl_ros2 ld14.launch.py
+  108  nvgstcapture-1.0 --mode=2
+  109  gst-launch-1.0 nvarguscamerasrc ! 'video/x-raw(memory:NVMM)' ! nvoverlaysink
+  110  gst-inspect-1.0 | grep nv
+  111  sudo apt install nvidia-l4t-gstreamer
+  112  gst-inspect-1.0 nvarguscamerasrc
+  113  sudo opt nvidia jetson-io jetson-io.py
+  114  gst-launch-1.0 nvarguscamerasrc sensor_id=0 ! nvoverlaysink
+  115  gst-launch-1.0 nvarguscamerasrc sensor_id=0 ! nveglglesssink
+  116  gst-launch-1.0 nvarguscamerasrc sensor_id=0 ! nveglglessink
+  117  ls
+  118  sudo python jetson-io.py
+  119  clear
+  120  cd /opt/nvidia/jetson-io/
+  121  ls
+  122  sudo python jetsion-io.py
+  123  sudo python jetson-io.py
+  124  ls
+  125  cd rob
+  126  cd CSI-Camera
+  127  ls
+  128  python3 face_detect.py
+  129  vim simple_camera.py
+  130  python3 simple_detect.py
+  131  python3 simple_camera.py
+  132  vim simple_camera.py
+  133  python3 simple_camera.py
+  134  vim simple_camera.py
+  135  python3 simple_camera.py
+  136  vim simple_camera.py
+  137  python3 simple_camera.py
+  138  vim simple_camera.py
+  139  python3 simple_camera.py
+  140  vim simple_camera.py
+  141  python3 simple_camera.py
+  142  vim simple_camera.py
+  143  python3 simple_camera.py
+  144  cd home
+  145  cd 
+  146  cd rob
+  147  cd od
+  148  python3 yolo.py
+  149  ls
+  150  python3 yolo.py
+  151  vim yolo.py
+  152  python3 yolo.py
+  153  vim yolo.py
+  154  python3 yolo.py
+  155  vim yolo.py
+  156  python3 yolo.py
+  157  vim yolo.py
+  158  python3 yolo.py
+  159  vim yolo.py
+  160  python3 yolo.py
+  161  vim yolo.py
+  162  python3 yolo.py
+  163  vim yolo.py
+  164  python3 yolo.py
+  165  vim yolo.py
+  166  python3 yolo.py
+  167  vim yolo.py
+  168  history>history.txt

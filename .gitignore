@@ -1,0 +1,41 @@
+# Python virtual environments
+**/venv/
+**/*_env/
+**/.venv/
+**/env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# ROS2 build artifacts
+**/build/
+**/install/
+**/log/
+
+# IDE
+.vscode/
+.idea/
+
+# Large model files (if any)
+*.pt
+*.pth
+*.onnx
+*.weights
+# Python virtual environments
+**/venv/
+**/*_env/
+**/.venv/
+**/env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# ROS2 build artifacts
+**/build/
+**/install/
+**/log/

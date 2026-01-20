@@ -1,0 +1,20 @@
+device: "cuda"           # CHANGE TO cuda on Jetson, for mac use "cpu"
+model_size: "tiny.en"    # faster-whisper sizes
+compute_type: "float16"     # float16 on Jetson; int8 on CPU
+device_index: 24
+sample_rate: 16000
+block_duration_ms: 140
+vad:
+  threshold: 0.7
+  min_speech_ms: 250
+  max_speech_ms: 800
+  min_silence_ms: 300
+  max_window_ms: 1500
+  stride: 3             # New parameter  
+commands:
+  forward: ["forward","ahead","move","proceed"]
+  left: ["left","turn left"]
+  right: ["right","turn right"]
+  back: ["back","backward","reverse","go back"]
+  stop: ["stop","halt"]
+  manual: ["manual","override","assist","take over"]
