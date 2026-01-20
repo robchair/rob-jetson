@@ -235,7 +235,7 @@ python3 arduino_base_driver_node.py
 cd ~/rob/rob_ws
 source /opt/ros/humble/setup.bash
 source install/setup.bash
-ros2 launch wheelchair_bringup wheelchair_ekf.launch.py debug_calibration:=true
+ros2 launch wheelchair_bringup EKF.launch.py 
 ```
 ## Terminal 3:EKF Output 
 ```bash
