@@ -26,7 +26,7 @@ class ArduinoBaseDriver(Node):
         self.declare_parameter("baud",                  115200)
         self.declare_parameter("linear_deadband",       0.05)
         self.declare_parameter("angular_deadband",      0.10)
-        self.declare_parameter("cmd_timeout_sec",       0.1)
+        self.declare_parameter("cmd_timeout_sec",       0.5)
         self.declare_parameter("ultrasonic_frame_id",   "ultrasonic_link")
         self.declare_parameter("ultrasonic_field_of_view", 0.5)
         self.declare_parameter("ultrasonic_min_range",  0.02)
