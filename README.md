@@ -2,9 +2,8 @@
 
 To get all the contents of submodules, if this 'rob-jetson' repo was just cloned, run:
 ```bash
-git clone --recurse-submodules <your-repo-url>
-# or
-git clone <your-repo-url>
-cd rob
+cd ~/
+git clone git@github.com:robchair/rob-jetson.git
+cd rob-jetson
 git submodule update --init --recursive
 ```
