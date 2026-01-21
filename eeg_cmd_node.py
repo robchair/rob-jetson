@@ -12,6 +12,7 @@ Prerequisites:
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
 from pylsl import StreamInlet, resolve_streams
 import numpy as np
 from collections import deque
@@ -25,24 +26,31 @@ class EegCmdNode(Node):
         # --- Parameters (tune these) ---
         self.declare_parameter('max_linear_speed', 0.3)
         self.declare_parameter('max_angular_speed', 0.5)
-        self.declare_parameter('x_threshold', 0.10)       # left/right tilt deadzone
-        self.declare_parameter('y_forward_threshold', 0.25) # Y above this = forward
-        self.declare_parameter('y_neutral', 0.18)           # Y at rest (from your data)
+        self.declare_parameter('x_threshold', 0.10)
+        self.declare_parameter('y_forward_threshold', 0.25)
+        self.declare_parameter('y_neutral', 0.18)
         self.declare_parameter('attention_threshold', 0.5)
-        self.declare_parameter('publish_rate', 10.0)
-        self.declare_parameter('use_attention_gate', True)  # disable until EEG is tuned
+        self.declare_parameter('publish_rate', 20.0)
+        self.declare_parameter('use_attention_gate', True)
 
-        self.max_linear = self.get_parameter('max_linear_speed').value
-        self.max_angular = self.get_parameter('max_angular_speed').value
-        self.x_thresh = self.get_parameter('x_threshold').value
+        self.max_linear   = self.get_parameter('max_linear_speed').value
+        self.max_angular  = self.get_parameter('max_angular_speed').value
+        self.x_thresh     = self.get_parameter('x_threshold').value
         self.y_fwd_thresh = self.get_parameter('y_forward_threshold').value
-        self.y_neutral = self.get_parameter('y_neutral').value
-        self.attn_thresh = self.get_parameter('attention_threshold').value
+        self.y_neutral    = self.get_parameter('y_neutral').value
+        self.attn_thresh  = self.get_parameter('attention_threshold').value
         self.use_attention = self.get_parameter('use_attention_gate').value
-        rate = self.get_parameter('publish_rate').value
+        rate              = self.get_parameter('publish_rate').value
 
-        # --- Publisher ---
-        self.publisher = self.create_publisher(Twist, '/cmd_vel_eeg', 10)
+        # --- Enabled flag (controlled by UI via /eeg_enabled) ---
+        self.enabled = False
+
+        # --- Publishers ---
+        self.publisher   = self.create_publisher(Twist, '/cmd_vel_eeg', 10)
+        self.status_pub  = self.create_publisher(Bool,  '/eeg_status',  10)
+
+        # --- Subscriber: UI enable/disable toggle ---
+        self.create_subscription(Bool, '/eeg_enabled', self._on_enabled, 10)
 
         # --- Connect to LSL streams ---
         self.acc_inlet = None
@@ -59,13 +67,15 @@ class EegCmdNode(Node):
 
         # --- Timer loop ---
         self.timer = self.create_timer(1.0 / rate, self.timer_callback)
-        self.get_logger().info('EEG CMD Node started')
+        self.get_logger().info('EEG CMD Node started (disabled until UI enables it)')
+
+    def _on_enabled(self, msg: Bool):
+        self.enabled = msg.data
+        self.get_logger().info(f'EEG {"ENABLED" if self.enabled else "DISABLED"} via /eeg_enabled')
 
     def connect_streams(self):
-        """Find and connect to muselsl ACC and EEG streams."""
         self.get_logger().info('Looking for MUSE LSL streams...')
         streams = resolve_streams()
-
         for s in streams:
             if s.type() == 'ACC' and self.acc_inlet is None:
                 self.acc_inlet = StreamInlet(s)
@@ -78,12 +88,15 @@ class EegCmdNode(Node):
             self.get_logger().error('No ACC stream found! Is muselsl stream --acc running?')
             raise RuntimeError('No ACC stream')
 
+        # Publish connected status
+        msg = Bool()
+        msg.data = True
+        self.status_pub.publish(msg)
+
     def calibrate(self):
-        """Read 2 seconds of ACC data to find neutral head position."""
-        self.get_logger().info('Calibrating... hold your head in neutral position')
+        self.get_logger().info('Calibrating... hold head in neutral position')
         samples = []
         start = time.time()
-
         while time.time() - start < 2.0:
             sample, ts = self.acc_inlet.pull_sample(timeout=0.1)
             if sample:
@@ -101,84 +114,69 @@ class EegCmdNode(Node):
             self.get_logger().warn('No calibration data, using defaults')
 
     def compute_attention(self):
-        """Alpha/beta ratio from EEG. Returns 0-1."""
         if len(self.eeg_buffer) < 256:
-            return 1.0  # default to GO if not enough data
-
+            return 1.0
         data = np.array(list(self.eeg_buffer))
-        # Use AF7 channel (index 1 in EEG stream: TP9, AF7, AF8, TP10, AUX)
         channel = data[:, 1]
-
         fft_vals = np.abs(np.fft.rfft(channel))
-        freqs = np.fft.rfftfreq(len(channel), d=1.0 / 256.0)
-
-        alpha_mask = (freqs >= 8) & (freqs <= 12)
-        beta_mask = (freqs >= 13) & (freqs <= 30)
-
+        freqs    = np.fft.rfftfreq(len(channel), d=1.0 / 256.0)
+        alpha_mask = (freqs >= 8)  & (freqs <= 12)
+        beta_mask  = (freqs >= 13) & (freqs <= 30)
         alpha_power = np.mean(fft_vals[alpha_mask]) if np.any(alpha_mask) else 1.0
-        beta_power = np.mean(fft_vals[beta_mask]) if np.any(beta_mask) else 0.0
-
+        beta_power  = np.mean(fft_vals[beta_mask])  if np.any(beta_mask)  else 0.0
         if alpha_power == 0:
             return 1.0
-
-        ratio = beta_power / alpha_power
-        attention = min(ratio / 3.0, 1.0)
-        return attention
+        return min((beta_power / alpha_power) / 3.0, 1.0)
 
     def timer_callback(self):
-        """Main loop: read ACC + EEG, compute Twist, publish."""
-        msg = Twist()
-
-        # --- Read all available ACC samples, use latest ---
+        # Drain ACC samples regardless so the buffer stays fresh
         acc_sample = None
         while True:
-            sample, ts = self.acc_inlet.pull_sample(timeout=0.0)
+            sample, _ = self.acc_inlet.pull_sample(timeout=0.0)
             if sample is None:
                 break
             acc_sample = sample
 
-        # --- Read all available EEG samples into buffer ---
+        # Drain EEG samples into buffer
         if self.eeg_inlet:
             while True:
-                sample, ts = self.eeg_inlet.pull_sample(timeout=0.0)
+                sample, _ = self.eeg_inlet.pull_sample(timeout=0.0)
                 if sample is None:
                     break
                 self.eeg_buffer.append(sample)
 
-        if acc_sample is None:
-            self.publisher.publish(msg)  # publish zero twist
+        # If disabled, do NOT publish — twist_mux will time out and ignore us
+        if not self.enabled:
             return
 
+        if acc_sample is None:
+            self.publisher.publish(Twist())
+            return
+
+        msg = Twist()
         x = acc_sample[0] - self.x_baseline
         y = acc_sample[1] - self.y_baseline
 
-        # --- Left/Right steering ---
         if abs(x) > self.x_thresh:
-            # Negative X = tilt left = turn left (positive angular.z)
-            # Positive X = tilt right = turn right (negative angular.z)
-            angular = -x / 0.7 * self.max_angular  # 0.7 is approx max tilt
-            msg.angular.z = np.clip(angular, -self.max_angular, self.max_angular)
+            angular = -x / 0.7 * self.max_angular
+            msg.angular.z = float(np.clip(angular, -self.max_angular, self.max_angular))
 
-        # --- Forward/Back ---
         if abs(y) > 0.05:
-            linear = y / 0.5 * self.max_linear  # 0.5 is approx max forward tilt
-            msg.linear.x = np.clip(linear, -self.max_linear, self.max_linear)
+            linear = y / 0.5 * self.max_linear
+            msg.linear.x = float(np.clip(linear, -self.max_linear, self.max_linear))
 
-        # --- Attention gate (optional) ---
         if self.use_attention:
             attention = self.compute_attention()
             if attention < self.attn_thresh:
-                msg.linear.x = 0.0
+                msg.linear.x  = 0.0
                 msg.angular.z = 0.0
                 self.get_logger().debug(f'Attention {attention:.2f} - STOPPED')
                 self.publisher.publish(msg)
                 return
 
         self.get_logger().info(
-            f'X:{x:+.2f} Y:{y:+.2f} | '
-            f'lin:{msg.linear.x:+.2f} ang:{msg.angular.z:+.2f}'
+            f'X:{x:+.2f} Y:{y:+.2f} | lin:{msg.linear.x:+.2f} ang:{msg.angular.z:+.2f}'
         )
-
         self.publisher.publish(msg)
 
     def destroy_node(self):
