@@ -1,0 +1,17 @@
+twist_mux:
+  ros__parameters:
+    topics:
+      keyboard:
+        topic   : /cmd_vel_keyboard
+        timeout : 0.5
+        priority: 100
+      voice:
+        topic   : /cmd_vel_voice
+        timeout : 0.5
+        priority: 50
+      nav:
+        topic   : /cmd_vel_nav
+        timeout : 0.5
+        priority: 10
+    output_topic: /cmd_vel_raw
+

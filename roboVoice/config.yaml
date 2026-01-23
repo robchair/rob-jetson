@@ -1,7 +1,7 @@
 device: "cuda"           # CHANGE TO cuda on Jetson, for mac use "cpu"
 model_size: "tiny.en"    # faster-whisper sizes
 compute_type: "float16"     # float16 on Jetson; int8 on CPU
-device_index: 24
+device_index: 0 #24
 sample_rate: 16000
 block_duration_ms: 140
 vad:
