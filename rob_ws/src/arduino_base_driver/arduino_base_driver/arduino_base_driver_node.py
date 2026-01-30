@@ -49,6 +49,7 @@ class ArduinoBaseDriver(Node):
         with self._lock:
             self.ser.write(line)
             self.ser.flush()
+            self._last_msg_time = time.time()
 
     def send_if_changed(self, cmd: str):
         if cmd == self._last_cmd:
@@ -74,9 +75,17 @@ class ArduinoBaseDriver(Node):
         self.send_if_changed(cmd)
 
     def watchdog(self):
-        # If no command recently, stop for safety
-        if (time.time() - self._last_msg_time) > self.cmd_timeout:
+        now = time.time()
+        # 1. Safety Timeout: If no ROS command recently, force stop
+        if (now - self._last_msg_time) > self.cmd_timeout:
             self.send_if_changed("stop")
+            return
+
+        # 2. Command Refresh: Re-send current command every ~200ms
+        # This fixes the issue where Arduino stops for obstalce but Python doesn't know,
+        # so when obstacle clears, we need to re-assert "forward"
+        if self._last_cmd and (now - self. _last_sent_time) > 0.2:
+            self.send(self._last_cmd)
 
 
 def main():

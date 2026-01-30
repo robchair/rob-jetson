@@ -17,6 +17,7 @@ class AudioStream:
         # force device_index to be an int; default to our USB mic
         if device_index is None:
             self.device_index = USB_MIC_INDEX
+            print("Using default USB mic index = 24. This is not set correctly, run python -m sounddevice to find the correct index.")
         else:
             # if it comes in as a string force to int
             self.device_index = int(device_index)
