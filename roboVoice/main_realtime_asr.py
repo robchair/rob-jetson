@@ -1,6 +1,6 @@
-# roboVoice/main_realtime_asr.py
 import os
 import yaml
+import numpy as np
 from roboVoice.audio_io import AudioStream
 from roboVoice.vad import VADSegmenter
 from roboVoice.asr import ASR
@@ -28,6 +28,7 @@ def run_realtime(on_command=None):
         device_index=cfg.get("device_index"),
     )
 
+    print("[debug] Initializing VAD...", flush=True)
     vcfg = cfg["vad"]
     vad = VADSegmenter(
         sr=cfg["sample_rate"],
@@ -38,14 +39,17 @@ def run_realtime(on_command=None):
         max_window_ms=vcfg["max_window_ms"],
         vad_stride=vcfg["stride"],
     )
+    print("[debug] VAD initialized.", flush=True)
 
+    print(f"[debug] Initializing ASR (model={cfg['model_size']}, device={cfg['device']})...", flush=True)
     asr = ASR(model_size=cfg["model_size"],
               device=cfg["device"],
               compute_type=cfg["compute_type"])
+    print("[debug] ASR initialized.", flush=True)
 
     mapper = CommandMapper(cfg["commands"], score_cutoff=80)
 
-    print("Listening for a command: (forward/left/right/back/stop/manual)")
+    print("Listening for a command: (forward/left/right/back/stop/manual)", flush=True)
     stream.start()
     try:
         while True:
@@ -53,7 +57,7 @@ def run_realtime(on_command=None):
             seg = vad.push(chunk)
             if seg is None:
                 continue
-
+            
             MAX_SEG_SEC = 1.0
             max_len = int(MAX_SEG_SEC * cfg["sample_rate"])
             if len(seg) > max_len:

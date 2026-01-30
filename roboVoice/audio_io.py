@@ -14,12 +14,12 @@ class AudioStream:
         self.block_tgt = int(self.target_sr * block_ms / 1000)
         self.q = Queue()
 
-        # force device_index to be an int; default to our USB mic
-        if device_index is None:
-            self.device_index = USB_MIC_INDEX
+        if device_index is not None:
+             self.device_index = int(device_index)
         else:
-            # if it comes in as a string force to int
-            self.device_index = int(device_index)
+             self.device_index = None
+        
+        print(f"[debug] AudioStream initialized. Device index: {self.device_index}", flush=True)
 
         self.device_sr = None
         self.channels_opened = 1
@@ -59,7 +59,12 @@ class AudioStream:
             self._residual = buf
 
     def start(self):
-        in_id = int(self.device_index)
+        if self.device_index is not None:
+            in_id = int(self.device_index)
+        else:
+            # Use default input device
+            in_id = sd.default.device[0]
+        
         print(f"[audio] Using input device index {in_id}")
 
         dev_info = sd.query_devices(in_id, kind='input')
