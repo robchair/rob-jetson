@@ -49,7 +49,7 @@ class ArduinoBaseDriver(Node):
         with self._lock:
             self.ser.write(line)
             self.ser.flush()
-            self._last_msg_time = time.time()
+            self._last_sent_time = time.time()
 
     def send_if_changed(self, cmd: str):
         if cmd == self._last_cmd:
