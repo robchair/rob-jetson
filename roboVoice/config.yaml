@@ -9,7 +9,7 @@ vad:
   min_speech_ms: 250
   max_speech_ms: 800
   min_silence_ms: 300
-  max_window_ms: 1500
+  max_window_ms: 1400
   stride: 3             # New parameter  
 commands:
   forward: ["forward","ahead","move","proceed"]

@@ -34,8 +34,8 @@ class SafetyGate(Node):
 
         self.pub = self.create_publisher(Twist, "/cmd_vel_safe", 10)
 
-        # IMPORTANT: mux output topic is /cmd_vel_out
-        self.cmd_sub = self.create_subscription(Twist, "/cmd_vel_out", self.on_cmd, 10)
+        # mux output topic is /cmd_vel_out
+        self.cmd_sub = self.create_subscription(Twist, "/cmd_vel_raw", self.on_cmd, 10)
         self.ultra_sub = self.create_subscription(Range, "/ultrasonic/range", self.on_ultra, 10)
 
         self.get_logger().info("SafetyGate running (/cmd_vel_out -> /cmd_vel_safe), gating on /ultrasonic/range")
@@ -47,7 +47,6 @@ class SafetyGate(Node):
         r = float(msg.range)
 
         # Treat invalid readings as "no obstacle" (Range msg uses min/max to bound validity)
-        # Some sensors/firmware will spit huge numbers when no echo.
         if r < msg.min_range or r > msg.max_range:
             self._last_range_m = None
             return
@@ -65,7 +64,6 @@ class SafetyGate(Node):
         now = time.time()
 
         # If we haven't heard ultrasonic recently, fail OPEN (do not block),
-        # because failing closed could strand the chair.
         if (now - self._last_ultra_time) > self.ultra_timeout:
             return False
 
@@ -81,7 +79,7 @@ class SafetyGate(Node):
 
     def on_cmd(self, msg: Twist):
         if self.should_block():
-            stop = Twist()  # all zeros
+            stop = Twist()  # zeros
             self.pub.publish(stop)
         else:
             self.pub.publish(msg)

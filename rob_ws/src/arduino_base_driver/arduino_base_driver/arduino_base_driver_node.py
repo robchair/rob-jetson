@@ -24,7 +24,7 @@ class ArduinoBaseDriver(Node):
         self.declare_parameter("baud", 9600)
         self.declare_parameter("linear_deadband", 0.05)
         self.declare_parameter("angular_deadband", 0.10)
-        self.declare_parameter("cmd_timeout_sec", 0.05)
+        self.declare_parameter("cmd_timeout_sec", 0.5)
 
         self.port = self.get_parameter("port").value
         self.baud = int(self.get_parameter("baud").value)
@@ -98,9 +98,8 @@ class ArduinoBaseDriver(Node):
             self.send_if_changed("stop")
             return
 
-        # 2. Command Refresh: Re-send current command every ~200ms
-        # This fixes the issue where Arduino stops for obstalce but Python doesn't know,
-        # so when obstacle clears, we need to re-assert "forward"
+        # Command refresh: re-send current command every 200ms
+        # when obstacle clears, we need to re-assert "cmd"
         if self._last_cmd and (now - self._last_sent_time) > 0.2:
             self.send(self._last_cmd)
 

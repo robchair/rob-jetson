@@ -41,3 +41,22 @@ If ROS2 is mentioning it cant find certain launch files, despite the setup.py fi
 cd ~/rob/rob_ws
 rm -rf build install log
 ```
+
+If the ROS2 daemon is crashed or bugging, restart it by running:
+```bash
+deactivate 2>/dev/null || true
+
+source /opt/ros/humble/setup.bash
+source ~/rob/rob_ws/install/setup.bash
+
+#Restart the ros2 CLI daemon
+ros2 daemon stop
+pkill -f ros2daemon 2>/dev/null || true
+rm -rf ~/.ros/ros2cli 2>/dev/null || true
+ros2 daemon start
+
+#Try any  again
+ros2 node list
+```
+
+

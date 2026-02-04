@@ -1,5 +1,5 @@
 // control_chair_bts7960.ino
-// Compatible with BTS7960 drivers and your Jetson serial protocol.
+// Compatible with BTS7960 drivers and Jetson serial protocol.
 
 // -------- PIN DEFINITIONS --------
 // Left motor BTS7960

@@ -5,5 +5,6 @@ source ~/rob/roboVoice/venv/bin/activate
 cd ~/rob/rob_ws
 source /opt/ros/humble/setup.bash
 colcon build --symlink-install
-source install/setup.bash
+#source install/setup.bash
+source ~/rob/rob_ws/install/setup.bash
 ros2 launch wheelchair_bringup mvp.launch.py

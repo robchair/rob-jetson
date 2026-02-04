@@ -6,7 +6,7 @@ from readchar import readkey, key
 
 # ---------------------------------------------------------------------
 # FIXED IMPORT PATHS
-# These force Python to use your actual project folders,
+# These force Python to use actual project folders,
 # and prevent fallback to old or installed versions.
 # ---------------------------------------------------------------------
 sys.path.insert(0, "/home/rob/rob/controller")
