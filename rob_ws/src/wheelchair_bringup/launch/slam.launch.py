@@ -7,41 +7,35 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     serial_port = LaunchConfiguration('serial_port', default='/dev/ttyUSB0')
-    serial_baudrate = LaunchConfiguration('serial_baudrate', default='115200') # A1/A2 default
-    frame_id = LaunchConfiguration('frame_id', default='laser')
-    inverted = LaunchConfiguration('inverted', default='false')
-    angle_compensate = LaunchConfiguration('angle_compensate', default='true')
+    frame_id = LaunchConfiguration('frame_id', default='base_laser')
 
     return LaunchDescription([
-        DeclareLaunchArgument('serial_port', default_value=serial_port),
-        DeclareLaunchArgument('serial_baudrate', default_value=serial_baudrate),
-        DeclareLaunchArgument('frame_id', default_value=frame_id),
-        
-        # 1. LiDAR Driver (LD06/LD19)
-        # Using official ldrobotSensorTeam/ldlidar_ros2 driver
-        Node(
-            package='ldlidar_ros2',
-            executable='ldlidar_ros2_node',
-            name='ldlidar_node',
-            output='screen',
-            parameters=[
-                {'product_name': 'LDLiDAR_LD14'},
-                {'laser_scan_topic_name': 'scan'},
-                {'frame_id': frame_id},
-                {'port_name': serial_port},
-                {'serial_baudrate': 115200}, 
-                {'laser_scan_dir': True},
-                {'enable_angle_crop_func': False}
-            ]
+        # 1. LiDAR Driver (LD19)
+        # Using the SDK package we installed
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                PathJoinSubstitution([
+                    FindPackageShare('ldlidar'), 'launch', 'ld19.launch.py'
+                ])
+            ])
         ),
 
-        # 2. Static Transform (base_link -> laser)
-        # Adjust XYZ/RPY as needed. Assuming laser is ~20cm forward, 10cm up.
+        # 2. LiDAR Odometry (RF2O)
+        # Generates odom -> base_link TF
         Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name='tf_base_link_to_laser',
-            arguments=['0.2', '0', '0.1', '0', '0', '0', 'base_link', 'laser']
+            package='rf2o_laser_odometry',
+            executable='rf2o_laser_odometry_node',
+            name='rf2o_laser_odometry',
+            output='screen',
+            parameters=[{
+                'laser_scan_topic': '/scan',
+                'odom_topic': '/odom',
+                'publish_tf': True,
+                'base_frame_id': 'base_link',
+                'odom_frame_id': 'odom',
+                'init_pose_from_topic': '',
+                'freq': 20.0
+            }],
         ),
 
         # 3. SLAM Toolbox (Async Mode)
