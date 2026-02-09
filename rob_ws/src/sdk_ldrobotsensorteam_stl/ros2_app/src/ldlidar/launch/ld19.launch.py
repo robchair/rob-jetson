@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.substitutions import Command
+from ament_index_python.packages import get_package_share_directory
+from launch_ros.parameter_descriptions import ParameterValue
+import os
 
 '''
 Parameter Description:
@@ -50,19 +54,27 @@ def generate_launch_description():
       ]
   )
 
-  # base_link to base_laser tf node
-  base_link_to_laser_tf_node = Node(
-    package='tf2_ros',
-    executable='static_transform_publisher',
-    name='base_link_to_base_laser_ld19',
-    arguments=['0','0','0.18','0','0','0','base_link','base_laser']
+  urdf_path = '/home/rob/rob/rob_ws/src/wheelchair_bringup/description/wheelchair.urdf.xacro'
+
+
+  robot_state_publisher = Node(
+    package='robot_state_publisher',
+    executable='robot_state_publisher',
+    name='robot_state_publisher',
+    output='screen',
+    parameters=[{
+        'robot_description': ParameterValue(
+            Command(['xacro ', urdf_path]),
+            value_type=str
+        )
+    }]
   )
+
 
 
   # Define LaunchDescription variable
   ld = LaunchDescription()
-
+  ld.add_action(robot_state_publisher)
   ld.add_action(ldlidar_node)
-  ld.add_action(base_link_to_laser_tf_node)
 
   return ld

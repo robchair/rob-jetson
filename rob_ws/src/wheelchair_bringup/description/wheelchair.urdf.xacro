@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="wheelchair">
+
+  <!-- Materials -->
+  <material name="metallic">
+    <color rgba="0.7 0.7 0.8 1.0"/>
+  </material>
+  <material name="black">
+    <color rgba="0.1 0.1 0.1 1.0"/>
+  </material>
+  
+  <!-- Base Link (Main Body) -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <!-- Main chassis approximation: 0.6m long, 0.4m wide, 0.4m high -->
+        <box size="0.6 0.4 0.4"/>
+      </geometry>
+      <material name="metallic"/>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+    </visual>
+  </link>
+
+  <!-- Left Main Wheel -->
+  <link name="left_wheel_link">
+    <visual>
+      <geometry>
+        <cylinder length="0.05" radius="0.15"/>
+      </geometry>
+      <material name="black"/>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/> <!-- Rotate for processing -->
+    </visual>
+  </link>
+
+  <joint name="left_wheel_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="left_wheel_link"/>
+    <!-- Positioned slightly back and to the left -->
+    <origin xyz="0 0.225 0.15" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Right Main Wheel -->
+  <link name="right_wheel_link">
+    <visual>
+      <geometry>
+        <cylinder length="0.05" radius="0.15"/>
+      </geometry>
+      <material name="black"/>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+    </visual>
+  </link>
+
+  <joint name="right_wheel_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="right_wheel_link"/>
+    <!-- Positioned slightly back and to the right -->
+    <origin xyz="0 -0.225 0.15" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Front Caster Wheels (Visual) -->
+    <!-- Left Caster -->
+  <link name="left_caster_link">
+    <visual>
+        <geometry>
+            <sphere radius="0.075"/>
+        </geometry>
+        <material name="black"/>
+    </visual>
+  </link>
+  <joint name="left_caster_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="left_caster_link"/>
+      <origin xyz="0.25 0.15 0.075" rpy="0 0 0"/>
+  </joint>
+
+    <!-- Right Caster -->
+  <link name="right_caster_link">
+    <visual>
+        <geometry>
+            <sphere radius="0.075"/>
+        </geometry>
+        <material name="black"/>
+    </visual>
+  </link>
+  <joint name="right_caster_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="right_caster_link"/>
+      <origin xyz="0.25 -0.15 0.075" rpy="0 0 0"/>
+  </joint>
+
+
+  <!-- LiDAR Link -->
+  <!-- This replaces the static transform we had in the launch file -->
+  <!-- Assuming LiDAR is mounted 20cm forward and 10cm above base origin (0.3m from ground) -->
+  <link name="base_laser">
+    <visual>
+      <geometry>
+        <cylinder length="0.05" radius="0.05"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="base_laser"/>
+    <origin xyz="0.2 0 0.4" rpy="0 0 0"/>
+  </joint>
+
+</robot>

@@ -17,6 +17,9 @@ setup(
 
         # Install config files
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
+        
+        # Install description (URDF) files
+        (os.path.join('share', package_name, 'description'), glob('description/*.xacro')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
