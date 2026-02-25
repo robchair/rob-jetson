@@ -60,3 +60,54 @@ ros2 node list
 ```
 
 
+# To see raw LiDAR LaserScan output in Rviz2:
+
+Note: Using this remository driver git clone `https://github.com/ldrobotSensorTeam/ldlidar_ros2.git`
+
+```bash
+cd ~/rob/rob_ws
+colcon build --symlink-install
+source install/setup.bash
+ros2 launch ldlidar_ros2 ld19.launch.py
+```
+
+In another terminal run:
+```bash
+source /opt/ros/humble/setup.bash
+source ~/rob/rob_ws/install/setup.bash
+ros2 run tf2_ros tf2_echo base_link base_laser
+```
+
+Then run in a new terminal to launch Rviz2:
+```bash
+source /opt/ros/humble/setup.bash
+source ~/rob/rob_ws/install/setup.bash
+rviz2
+```
+
+In the Rviz2 GUI:
+
+Set Fixed Frame = base_link (or base_laser if base_link isn’t available yet)
+
+Add -> LaserScan
+
+Set Topic = /scan
+
+
+## To try and run SLAM:
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/rob/rob_ws/install/setup.bash
+#ros2 launch slam_toolbox online_async_launch.py
+ros2 launch slam_toolbox online_async_launch.py slam_params_file:=/home/rob/rob_ws/src/wheelchair_bringup/config/slam_toolbox.yaml
+```
+
+Then in the Rviz2 GUI, add:
+
+- Map (/map)
+
+- TF
+
+- LaserScan (/scan)
+
