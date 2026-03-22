@@ -71,8 +71,8 @@ def generate_launch_description():
             "wheel_radius_m": 0.305,
             "wheel_base_m":   0.515,
             "ticks_per_rev":  1199.67,
-            "left_sign":      1.0,
-            "right_sign":     -1.0,
+            "left_sign":      -1.0,
+            "right_sign":     1.0,
         }],
     )
 
@@ -123,7 +123,7 @@ def generate_launch_description():
         package="tf2_ros",
         executable="static_transform_publisher",
         name="static_tf_base_to_imu",
-        arguments=[
+        arguments=[#Update values based on the mounting of the IMU onto the chair 
             "0.1",  "0.0",  "0.05",   # x  y  z  (meters from base_link origin)
             "0.0",  "0.0",  "0.0",    # roll pitch yaw (radians)
             "base_link",

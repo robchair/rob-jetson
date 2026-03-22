@@ -113,9 +113,17 @@ class BNO055UartNode(Node):
         self.configure_sensor()
 
         # Calibration gate
+        self.declare_parameter("calibration_file", "/home/rob/rob/imu_calibration.json")
+        self.cal_file = self.get_parameter("calibration_file").value
+
         self.calibrated = False
-        if self.gate_on_startup:
+        cal_loaded = self.load_calibration(self.cal_file)
+        if cal_loaded:
+            self.get_logger().info("Calibration offsets restored — skipping calibration gate")
+            self.calibrated = True
+        elif self.gate_on_startup:
             self.wait_for_calibration()
+            self.save_calibration(self.cal_file)
         else:
             self.calibrated = True
 
@@ -165,6 +173,46 @@ class BNO055UartNode(Node):
         self.get_logger().info(f"Set NDOF mode: {resp!r}")
         time.sleep(0.1)
 
+    def save_calibration(self, path: str):
+        # Must be in CONFIG mode to read offsets
+        self.write_reg(0x3D, 0x00)
+        time.sleep(0.05)
+        resp = self.read_reg(0x55, 22)
+        self.write_reg(0x3D, 0x0C)
+        time.sleep(0.1)
+        if len(resp) < 24 or resp[0] != 0xBB or resp[1] != 0x16:
+            self.get_logger().error("Failed to read calibration offsets")
+            return False
+        offsets = list(resp[2:24])
+        import json
+        with open(path, "w") as f:
+            json.dump(offsets, f)
+        self.get_logger().info(f"Calibration saved to {path}")
+        return True
+
+    def load_calibration(self, path: str) -> bool:
+        import json
+        import os
+        if not os.path.exists(path):
+            self.get_logger().warn(f"No calibration file found at {path}")
+            return False
+        with open(path, "r") as f:
+            offsets = json.load(f)
+        if len(offsets) != 22:
+            self.get_logger().error("Calibration file has wrong length")
+            return False
+        # Must be in CONFIG mode to write offsets
+        self.write_reg(0x3D, 0x00)
+        time.sleep(0.05)
+        for i, val in enumerate(offsets):
+            self.write_reg(0x55 + i, val)
+            time.sleep(0.01)
+        self.write_reg(0x3D, 0x0C)
+        time.sleep(0.1)
+        self.get_logger().info(f"Calibration loaded from {path}")
+        return True
+
+ 
     # ------------------------------------------------ #
     # Calibration
     # ------------------------------------------------ #
