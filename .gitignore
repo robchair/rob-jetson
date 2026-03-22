@@ -39,3 +39,4 @@ __pycache__/
 **/build/
 **/install/
 **/log/
+*.db
