@@ -38,8 +38,8 @@ class EncoderOdom(Node):
         self.declare_parameter("odom_frame", "odom")
         self.declare_parameter("publish_tf", True)
 
-        self.declare_parameter("wheel_radius_m", 0.15)
-        self.declare_parameter("wheel_base_m", 0.60)
+        self.declare_parameter("wheel_radius_m", 0.15)#change to new radius
+        self.declare_parameter("wheel_base_m", 0.60)#change to new base 
         self.declare_parameter("ticks_per_rev", 600.0)
 
         # Optional sign correction at ROS level
@@ -100,7 +100,8 @@ class EncoderOdom(Node):
         left = int(self.left_sign * left)
         right = int(self.right_sign * right)
 
-        now_ros = time.time()
+        #now_ros = time.time()
+        now_ros = self.get_clock().now().nanosecods * 1e-9      # use ROS /clock instead of OS clock
 
         if self.prev_left is None:
             self.prev_left = left
@@ -132,6 +133,7 @@ class EncoderOdom(Node):
         self.x += d_center * math.cos(yaw_mid)
         self.y += d_center * math.sin(yaw_mid)
         self.yaw += d_theta
+        selfyaw = math.atan2(math.sin(self.yaw), math.cos(self.yaw))    #Normalize yaw after update
 
         self.last_vx = d_center / dt
         self.last_wz = d_theta / dt

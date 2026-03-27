@@ -130,3 +130,27 @@ Then in the Rviz2 GUI, add the following for SLAM map display:
 
 - LaserScan (/scan)
 
+
+### To launch encoder odometry:
+
+- Have the arduino hooked up to the encoders flashed with a script that works
+
+Run the following command in one terminal (link encoders and arduino with the Jetson and ROS system):
+
+```bash
+ros2 run wheelchair_localization encoder_serial_node --ros-args -p port:=/dev/ttyACM0 -p baud:=115200
+```
+
+Then bring up odom node:
+
+```bash
+ros2 run wheelchair_localization encoder_odom \
+  --ros-args \
+  -p encoder_topic:=/wheel_encoder_ticks \
+  -p odom_topic:=/odom \
+  -p wheel_radius_m:=0.15 \
+  -p wheel_base_m:=0.60 \
+  -p ticks_per_rev:=600.0 \
+  -p left_sign:=1.0 \
+  -p right_sign:=1.0
+```

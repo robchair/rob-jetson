@@ -67,6 +67,7 @@ class ArduinoBaseDriver(Node):
         with self._lock:
             self.ser.write(line)
             self.ser.flush()
+        self._last_sent_time = time.time()      # update last_sent_time (bug)
 
     def send_if_changed(self, cmd: str):
         if cmd == self._last_cmd:
