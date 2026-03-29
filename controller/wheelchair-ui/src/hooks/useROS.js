@@ -6,7 +6,7 @@ const ROSBRIDGE_URL = "ws://localhost:9090";
 export default function useROS() {
   const rosRef = useRef(null);
   const topicRef = useRef(null);
-  const [status, setStatus] = useState("connecting"); // connecting | connected | error
+  const [status, setStatus] = useState("connecting");
 
   useEffect(() => {
     function connect() {
@@ -38,12 +38,10 @@ export default function useROS() {
   }, []);
 
   function publish(linear, angular) {
-    topicRef.current?.publish(
-      new ROSLIB.Message({
-        linear:  { x: linear, y: 0, z: 0 },
-        angular: { x: 0, y: 0, z: angular },
-      })
-    );
+    topicRef.current?.publish({
+      linear: { x: linear, y: 0, z: 0 },
+      angular: { x: 0, y: 0, z: angular },
+    });
   }
 
   function stop() {
