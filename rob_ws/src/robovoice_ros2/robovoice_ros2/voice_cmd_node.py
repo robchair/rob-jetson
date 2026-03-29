@@ -6,6 +6,7 @@ import time
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
 
 # Make /home/rob/rob importable so "import roboVoice" works
 sys.path.insert(0, os.path.expanduser("~/rob"))
@@ -31,11 +32,24 @@ class VoiceCmdNode(Node):
         self._lock = threading.Lock()
         self._last_twist = Twist()
         self._have_cmd = False
+        self._enabled = False
+
+        self.pub = self.create_publisher(Twist, "/cmd_vel_voice", 10)
+        self.create_subscription(Bool, "/voice_enabled", self._on_enable, 10)
 
         # publish last command continuously (so twist_mux never times out)
         self._timer = self.create_timer(1.0 / self.publish_rate_hz, self._on_timer)
 
-        self.get_logger().info("VoiceCmdNode started. Listening for voice commands...")
+        self.get_logger().info("VoiceCmdNode started. Waiting for /voice_enabled...")
+
+    def _on_enable(self, msg: Bool):
+        with self._lock:
+            self._enabled = msg.data
+            if not self._enabled:
+                self._last_twist = Twist()
+                self._have_cmd = False
+        state = "ENABLED" if msg.data else "DISABLED"
+        self.get_logger().info(f"[voice] {state} via /voice_enabled")
 
     def _on_timer(self):
         with self._lock:
