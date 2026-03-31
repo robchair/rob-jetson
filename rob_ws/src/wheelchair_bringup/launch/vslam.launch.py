@@ -1,64 +1,41 @@
-"""
-vslam.launch.py
-Launches RTAB-Map with the Intel RealSense D435 for Visual SLAM.
-
-Topics consumed from camera.launch.py:
-  /camera/camera/color/image_raw
-  /camera/camera/color/camera_info
-  /camera/camera/aligned_depth_to_color/image_raw
-
-Topics published:
-  /rtabmap/map          — 3D point cloud map
-  /rtabmap/odom         — visual odometry (pose estimate)
-  /map                  — 2D occupancy grid
-
-Run camera.launch.py FIRST before this.
-"""
-
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, Command
+from launch_ros.parameter_descriptions import ParameterValue
+from ament_index_python.packages import get_package_share_directory
+import os
 
 
 def launch_setup(context, *args, **kwargs):
-    # Resolve the localization argument
     localization_val = LaunchConfiguration('localization').perform(context)
-    
     is_localization = (localization_val.lower() == 'true')
     mapping_mode = "false" if is_localization else "true"
-    
-    # We use camera_link as the base frame since base_link isn't published yet
-    base_frame = "camera_link"
-    
+
+    base_frame = "base_link"
+
     remappings = [
         ('rgb/image',       '/camera/camera/color/image_raw'),
         ('rgb/camera_info', '/camera/camera/color/camera_info'),
         ('depth/image',     '/camera/camera/aligned_depth_to_color/image_raw'),
     ]
 
-    # 1. Visual Odometry Node
-    odom_node = Node(
-        package='rtabmap_odom',
-        executable='rgbd_odometry',
-        name='rgbd_odometry',
-        output='screen',
-        parameters=[{
-            'frame_id': base_frame,
-            'odom_frame_id': 'odom',
-            'publish_tf': True,
-            'approx_sync': True,
-            'approx_sync_max_interval': 0.1,
-            'wait_for_transform': 0.8,       # Even more time to handle hand-held jitter
-            # Robustness tuning for fast motion
-            'Vis/MinInliers': '8',           # More lenient (default is 20, we had 12)
-            'Vis/MaxFeatures': '1000',       # Detect more points to help matching
-            'Odom/Strategy': '0',            # Frame-to-Map
-        }],
-        remappings=remappings,
+    pkg_share = get_package_share_directory('wheelchair_bringup')
+    urdf_path = os.path.join(pkg_share, 'urdf', 'wheelchair.urdf')
+
+    robot_description = ParameterValue(
+        Command(['cat ', urdf_path]),
+        value_type=str
     )
 
-    # 2. RTAB-Map Main SLAM Node
+    robot_state_publisher_node = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        name='robot_state_publisher',
+        output='screen',
+        parameters=[{'robot_description': robot_description}]
+    )
+
     rtabmap_node = Node(
         package='rtabmap_slam',
         executable='rtabmap',
@@ -74,23 +51,22 @@ def launch_setup(context, *args, **kwargs):
             'approx_sync': True,
             'approx_sync_max_interval': 0.1,
             'wait_for_transform': 0.8,
-
-            # Mapping / localization mode
             'Mem/IncrementalMemory': mapping_mode,
             'Mem/InitWMWithAllNodes': localization_val,
-
-            # 2D occupancy grid & Loop Closure
-            'Grid/Sensor': '1',                # Depth camera
+            'Grid/Sensor': '1',
             'Grid/3D': 'false',
-            'Grid/FromDepth': 'true',          # Ensure grid is built from depth
+            'Grid/FromDepth': 'true',
             'Grid/RangeMax': '4.0',
             'Grid/CellSize': '0.05',
-            'RGBD/NeighborLinkRefining': 'true', # Improves loop closure 
+            'RGBD/NeighborLinkRefining': 'true',
         }],
         remappings=remappings,
     )
 
-    return [odom_node, rtabmap_node]
+    return [
+        robot_state_publisher_node,
+        rtabmap_node
+    ]
 
 
 def generate_launch_description():
