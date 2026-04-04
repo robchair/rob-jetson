@@ -101,6 +101,7 @@ ros2 run wheelchair_localization encoder_odom \
 
 # Terminal 4: Start Visual SLAM (RTAB-Map)
 ```bash
+rm /home/rob/rob/rob_ws/rtabmap.db
 source /opt/ros/humble/setup.bash
 source ~/rob/rob_ws/install/setup.bash
 
