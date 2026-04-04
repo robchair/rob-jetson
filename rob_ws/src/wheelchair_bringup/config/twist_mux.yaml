@@ -5,6 +5,10 @@ twist_mux:
         topic   : /cmd_vel_keyboard
         timeout : 0.5
         priority: 100
+      eeg:
+        topic   : /cmd_vel_eeg
+        timeout : 0.5
+        priority: 30
       voice:
         topic   : /cmd_vel_voice
         timeout : 0.5
