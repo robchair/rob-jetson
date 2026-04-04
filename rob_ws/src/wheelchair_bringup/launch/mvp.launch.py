@@ -14,6 +14,7 @@ def generate_launch_description():
 
     venv_python = "/home/rob/rob/roboVoice/venv/bin/python3"
     voice_module = "robovoice_ros2.voice_cmd_node"  # must exist as module
+    eeg_script = "/home/rob/eeg_cmd_node.py"
 
     return LaunchDescription([
         # 1) Voice -> /cmd_vel_voice (run with venv python explicitly)
@@ -25,6 +26,16 @@ def generate_launch_description():
                 "-p", "linear_speed:=0.30",
                 "-p", "angular_speed:=0.80",
             ],
+            output="screen",
+        ),
+
+        ExecuteProcess(
+            cmd=["/home/rob/.local/bin/muselsl", "stream", "--address", "00:55:DA:B8:34:01", "--acc"],
+            output="screen",
+        ), 
+
+        ExecuteProcess(
+            cmd=[venv_python, eeg_script],
             output="screen",
         ),
 
