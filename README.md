@@ -59,4 +59,51 @@ ros2 daemon start
 ros2 node list
 ```
 
+# Terminal 1: Start camera
+```bash
+source /opt/ros/humble/setup.bash
+source ~/rob/rob_ws/install/setup.bash
+
+ros2 launch wheelchair_bringup camera.launch.py
+```
+
+# Terminal 2: Start encoder serial node
+```bash
+source /opt/ros/humble/setup.bash
+source ~/rob/rob_ws/install/setup.bash
+
+ros2 run wheelchair_localization encoder_serial_node \
+  --ros-args \
+  -p port:=/dev/ttyACM0 \
+  -p baud:=115200
+```
+
+# Terminal 3: Start encoder odometry
+```bash
+source /opt/ros/humble/setup.bash
+source ~/rob/rob_ws/install/setup.bash
+
+ros2 run wheelchair_localization encoder_odom \
+  --ros-args \
+  -p encoder_topic:=/wheel_encoder_ticks \
+  -p odom_topic:=/odom \
+  -p wheel_radius_m:=0.15 \
+  -p wheel_base_m:=0.60 \
+  -p ticks_per_rev:=1203.0 \
+  -p left_sign:=1.0 \
+  -p right_sign:=-1.0
+```
+
+# Terminal 4: Start Visual SLAM (RTAB-Map)
+```bash
+source /opt/ros/humble/setup.bash
+source ~/rob/rob_ws/install/setup.bash
+
+ros2 launch wheelchair_bringup vslam.launch.py
+```
+
+# Optional: Open RViz (if not auto-launched)
+```bash
+rviz2
+```
 
