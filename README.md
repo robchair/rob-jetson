@@ -87,9 +87,9 @@ ros2 run wheelchair_localization encoder_odom \
   --ros-args \
   -p encoder_topic:=/wheel_encoder_ticks \
   -p odom_topic:=/odom \
-  -p wheel_radius_m:=0.15 \
-  -p wheel_base_m:=0.60 \
-  -p ticks_per_rev:=1203.0 \
+  -p wheel_radius_m:=0.305 \
+  -p wheel_base_m:=0.515 \
+  -p ticks_per_rev:=1199.67 \
   -p left_sign:=1.0 \
   -p right_sign:=-1.0
 ```
