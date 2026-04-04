@@ -61,6 +61,9 @@ ros2 node list
 
 # Terminal 1: Start camera
 ```bash
+cd ~/rob/rob_ws
+rm -rf build install log   # clean old branch build
+colcon build --packages-select wheelchair_bringup
 source /opt/ros/humble/setup.bash
 source ~/rob/rob_ws/install/setup.bash
 
@@ -69,6 +72,8 @@ ros2 launch wheelchair_bringup camera.launch.py
 
 # Terminal 2: Start encoder serial node
 ```bash
+cd ~/rob/rob_ws
+colcon build --packages-select wheelchair_localization
 source /opt/ros/humble/setup.bash
 source ~/rob/rob_ws/install/setup.bash
 
