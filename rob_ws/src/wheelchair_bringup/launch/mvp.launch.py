@@ -17,16 +17,16 @@ def generate_launch_description():
 
     return LaunchDescription([
         # 1) Voice -> /cmd_vel_voice (run with venv python explicitly)
-        ExecuteProcess(
-            cmd=[
-                venv_python, "-m", voice_module,
-                "--ros-args",
-                "-r", "__node:=voice_cmd_node",
-                "-p", "linear_speed:=0.30",
-                "-p", "angular_speed:=0.80",
-            ],
-            output="screen",
-        ),
+#        ExecuteProcess(
+#            cmd=[
+#                venv_python, "-m", voice_module,
+#                "--ros-args",
+#                "-r", "__node:=voice_cmd_node",
+#                "-p", "linear_speed:=0.30",
+#                "-p", "angular_speed:=0.80",
+#            ],
+#            output="screen",
+#        ),
 
         # 2) Twist mux -> /cmd_vel_raw
         Node(
