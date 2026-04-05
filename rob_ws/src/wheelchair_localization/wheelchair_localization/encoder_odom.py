@@ -133,7 +133,7 @@ class EncoderOdom(Node):
         self.x += d_center * math.cos(yaw_mid)
         self.y += d_center * math.sin(yaw_mid)
         self.yaw += d_theta
-        selfyaw = math.atan2(math.sin(self.yaw), math.cos(self.yaw))    #Normalize yaw after update
+        self.yaw = math.atan2(math.sin(self.yaw), math.cos(self.yaw))    #Normalize yaw after update
 
         self.last_vx = d_center / dt
         self.last_wz = d_theta / dt
