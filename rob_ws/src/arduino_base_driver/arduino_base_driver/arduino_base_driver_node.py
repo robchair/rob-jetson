@@ -45,8 +45,8 @@ class ArduinoBaseDriver(Node):
         # --- State ---
         self._lock           = threading.Lock()
         self._last_cmd       = None
-        self._last_msg_time  = time.time()
-        self._last_sent_time = time.time()
+        self._last_msg_time  = time.monotonic()
+        self._last_sent_time = time.monotonic()
 
         # --- Serial ---
         self.ser = serial.Serial(self.port, baudrate=self.baud, timeout=1)
@@ -76,7 +76,7 @@ class ArduinoBaseDriver(Node):
         with self._lock:
             self.ser.write(line)
             self.ser.flush()
-        self._last_sent_time = time.time()
+        self._last_sent_time = time.monotonic()
 
     def send_if_changed(self, cmd: str):
         if cmd == self._last_cmd:
@@ -89,7 +89,8 @@ class ArduinoBaseDriver(Node):
     #  cmd_vel callback                                                    #
     # ------------------------------------------------------------------ #
     def on_cmd_vel(self, msg: Twist):
-        self._last_msg_time = time.time()
+        self._last_msg_time = time.monotonic()
+
         lin = msg.linear.x
         ang = msg.angular.z
 
@@ -100,18 +101,28 @@ class ArduinoBaseDriver(Node):
         else:
             cmd = "turnLeft" if ang > 0 else "turnRight"
 
-        self.send_if_changed(cmd)
-
+        # Only send if the command actually changed — avoids serial spam
+        if cmd != self._last_cmd:
+            self.send(cmd)
+            self._last_cmd = cmd
+            self.get_logger().info(f"Command changed -> {cmd}")
     # ------------------------------------------------------------------ #
     #  Watchdog                                                            #
     # ------------------------------------------------------------------ #
     def watchdog(self):
-        now = time.time()
+        now = time.monotonic()
+
+        # 1. If navigation stack goes silent, stop the wheelchair
         if (now - self._last_msg_time) > self.cmd_timeout:
-            self.send_if_changed("stop")
-            self.get_logger().info("[Watchdog] Sending STOP over serial")
+            if self._last_cmd != "stop":
+                self.send("stop")
+                self._last_cmd = "stop"
+                self.get_logger().info("Navigation timeout -> stop")
             return
-        if self._last_cmd and (now - self._last_sent_time) > 0.2:
+
+        # 2. keepalive: always resend current command every 100ms
+        # Uses self.send() directly, not send_if_changed
+        if self._last_cmd is not None and (now - self._last_sent_time) > 0.1:
             self.send(self._last_cmd)
 
     # ------------------------------------------------------------------ #
