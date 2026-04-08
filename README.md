@@ -220,11 +220,42 @@ muselst list
 ```
 # Terminal 1: Connect headset
 ```bash
-muselsl stream --address 00:55:DA:B834:01
+muselsl stream --address 00:55:DA:B8:34:01 --acc
 ```
 
 # Terminal 2: Connect headset
 ```bash
 python3 ~/rob/eeg_cmd_node.py
 ```
+
+# If errors when connecting do this and after repeat first step:
+```bash
+# bring each stopped job back and kill it
+kill %1 %2 %3 %4 %5 %6 %7
+# or just nuke all of them at once
+pkill -f muselsl
+bluetoothctl disconnect 00:55:DA:B8:34:01
+```
+
+# How to run the EEG headest with Ui
+# Terminal 1: Start UI(when ready enable mind contol in UI)
+```bash
+python3 ~/rob/controller/ui.py
+```
+
+# Terminal 2: Connect Headset
+```bash
+python3 ~/rob/eeg_cmd_node.py
+```
+
+# Terminal 3: Run MVP
+```bash
+source ~/rob/roboVoice/venv/bin/activate
+cd ~/rob/rob_ws
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+ros2 launch wheelchair_bringup mvp.launch.py # Only need to run this one if no changes were made since last build
+```
+
 
