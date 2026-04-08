@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """
 RoboBCI - EEG/ACC Control Node for Smart Wheelchair
-Uses MUSE 2 accelerometer (via muselsl/pylsl) for head-tilt steering
-and EEG alpha/beta ratio for attention-based go/stop gating.
-
+Uses MUSE 2 accelerometer for head-tilt steering and eyebrow raise as a toggle gate.
 Prerequisites:
   Terminal 1: muselsl stream --address 00:55:DA:B8:34:01 --acc
-  Terminal 2: ros2 run <your_package> eeg_cmd_node
+  Terminal 2: python3 eeg_cmd_node.py
 """
-
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
@@ -18,68 +15,71 @@ import numpy as np
 from collections import deque
 import time
 
-
 class EegCmdNode(Node):
     def __init__(self):
         super().__init__('eeg_cmd_node')
 
-        # --- Parameters (tune these) ---
-        self.declare_parameter('max_linear_speed', 0.3)
-        self.declare_parameter('max_angular_speed', 0.5)
-        self.declare_parameter('x_threshold', 0.10)
-        self.declare_parameter('y_forward_threshold', 0.25)
-        self.declare_parameter('y_neutral', 0.18)
-        self.declare_parameter('attention_threshold', 0.5)
-        self.declare_parameter('publish_rate', 20.0)
-        self.declare_parameter('use_attention_gate', False)  # disabled: ACC-only mode
+        # --- Parameters ---
+        self.declare_parameter('max_linear_speed',   0.3)
+        self.declare_parameter('max_angular_speed',  0.5)
+        self.declare_parameter('x_threshold',        0.15)   # from diagnostic
+        self.declare_parameter('publish_rate',       20.0)
+        # Eyebrow raise detection — delta-based, not absolute
+        self.declare_parameter('brow_delta_thresh',  150.0)  # µV above rolling baseline
+        self.declare_parameter('brow_min_samples',   4)      # ~16ms sustained spike
+        self.declare_parameter('brow_cooldown',      2.0)    # seconds between toggles
+        self.declare_parameter('brow_baseline_len',  128)    # samples for rolling baseline
 
         self.max_linear   = self.get_parameter('max_linear_speed').value
         self.max_angular  = self.get_parameter('max_angular_speed').value
         self.x_thresh     = self.get_parameter('x_threshold').value
-        self.y_fwd_thresh = self.get_parameter('y_forward_threshold').value
-        self.y_neutral    = self.get_parameter('y_neutral').value
-        self.attn_thresh  = self.get_parameter('attention_threshold').value
-        self.use_attention = self.get_parameter('use_attention_gate').value
+        self.brow_delta   = self.get_parameter('brow_delta_thresh').value
+        self.brow_min     = self.get_parameter('brow_min_samples').value
+        self.brow_cool    = self.get_parameter('brow_cooldown').value
+        brow_base_len     = self.get_parameter('brow_baseline_len').value
         rate              = self.get_parameter('publish_rate').value
 
-        # --- Enabled flag (controlled by UI via /eeg_enabled) ---
-        self.enabled = False
+        # --- State ---
+        self.enabled          = False
+        self.movement_allowed = False
+        self.last_brow_time   = 0.0
+        self.missed_samples   = 0
+        self.MISS_LIMIT       = 20
+        self.is_connected     = True
 
-        # --- Connection health tracking ---
-        self.missed_samples = 0
-        self.MISS_LIMIT = 20  # ~1 second at 20Hz before declaring disconnected
-        self.is_connected = True
+        # --- ACC calibration state ---
+        self.x_baseline = 0.0
+        self.y_baseline = 0.0
 
         # --- Publishers ---
-        self.publisher   = self.create_publisher(Twist, '/cmd_vel_eeg', 10)
-        self.status_pub  = self.create_publisher(Bool,  '/eeg_status',  10)
+        self.publisher  = self.create_publisher(Twist, '/cmd_vel_eeg', 10)
+        self.status_pub = self.create_publisher(Bool,  '/eeg_status',  10)
 
-        # --- Subscriber: UI enable/disable toggle ---
+        # --- Subscriber ---
         self.create_subscription(Bool, '/eeg_enabled', self._on_enabled, 10)
 
-        # --- Connect to LSL streams ---
+        # --- LSL streams ---
         self.acc_inlet = None
         self.eeg_inlet = None
         self.connect_streams()
 
-        # --- EEG buffer for attention calculation ---
-        self.eeg_buffer = deque(maxlen=256)
+        # --- EEG buffers ---
+        # recent_eeg: last few samples to check for spike
+        # baseline_eeg: longer rolling window to compute ambient level
+        self.recent_eeg   = deque(maxlen=self.brow_min)
+        self.baseline_eeg = deque(maxlen=brow_base_len)
 
-        # --- Connection health tracking ---
-        self.missed_samples = 0
-        self.MISS_LIMIT = 20  # ~1 second at 20Hz before declaring disconnected
-        self.is_connected = True
-
-        # --- Calibration ---
-        self.x_baseline = 0.0
-        self.y_baseline = self.y_neutral
+        # --- ACC calibration ---
         self.calibrate()
 
-        # --- Timer loop ---
-        self._last_stream_check = time.time()
-        self._stream_check_interval = 2.0  # check every 2 seconds
+        # --- Stream health check ---
+        self._last_stream_check     = time.time()
+        self._stream_check_interval = 2.0
+
         self.timer = self.create_timer(1.0 / rate, self.timer_callback)
-        self.get_logger().info('EEG CMD Node started (disabled until UI enables it)')
+        self.get_logger().info('EEG CMD Node ready — raise eyebrows to toggle movement')
+
+    # ------------------------------------------------------------------
 
     def _on_enabled(self, msg: Bool):
         self.enabled = msg.data
@@ -95,54 +95,54 @@ class EegCmdNode(Node):
             elif s.type() == 'EEG' and self.eeg_inlet is None:
                 self.eeg_inlet = StreamInlet(s)
                 self.get_logger().info('Connected to EEG stream')
-
         if self.acc_inlet is None:
             self.get_logger().error('No ACC stream found! Is muselsl stream --acc running?')
             raise RuntimeError('No ACC stream')
-
-        # Publish connected status
-        msg = Bool()
-        msg.data = True
-        self.status_pub.publish(msg)
+        status = Bool(); status.data = True
+        self.status_pub.publish(status)
 
     def calibrate(self):
-        self.get_logger().info('Calibrating... hold head in neutral position')
+        self.get_logger().info('Calibrating ACC... hold head still in neutral position')
         samples = []
         start = time.time()
         while time.time() - start < 2.0:
-            sample, ts = self.acc_inlet.pull_sample(timeout=0.1)
+            sample, _ = self.acc_inlet.pull_sample(timeout=0.1)
             if sample:
                 samples.append(sample)
-
         if samples:
             data = np.array(samples)
             self.x_baseline = np.mean(data[:, 0])
             self.y_baseline = np.mean(data[:, 1])
             self.get_logger().info(
-                f'Calibrated - X baseline: {self.x_baseline:.3f}, '
-                f'Y baseline: {self.y_baseline:.3f}'
+                f'Calibrated — X baseline: {self.x_baseline:.3f}, Y baseline: {self.y_baseline:.3f}'
             )
         else:
-            self.get_logger().warn('No calibration data, using defaults')
+            self.get_logger().warn('No calibration data — using defaults (0, 0)')
 
-    def compute_attention(self):
-        if len(self.eeg_buffer) < 256:
-            return 1.0
-        data = np.array(list(self.eeg_buffer))
-        channel = data[:, 1]
-        fft_vals = np.abs(np.fft.rfft(channel))
-        freqs    = np.fft.rfftfreq(len(channel), d=1.0 / 256.0)
-        alpha_mask = (freqs >= 8)  & (freqs <= 12)
-        beta_mask  = (freqs >= 13) & (freqs <= 30)
-        alpha_power = np.mean(fft_vals[alpha_mask]) if np.any(alpha_mask) else 1.0
-        beta_power  = np.mean(fft_vals[beta_mask])  if np.any(beta_mask)  else 0.0
-        if alpha_power == 0:
-            return 1.0
-        return min((beta_power / alpha_power) / 3.0, 1.0)
+    def detect_eyebrow(self) -> bool:
+        """
+        Delta-based eyebrow raise detection.
+        Returns True when the last brow_min EEG samples all exceed the rolling
+        baseline by brow_delta_thresh µV on at least one frontal channel (0 or 3,
+        which correspond to AF7 and AF8 on the MUSE 2).
+        Using delta instead of absolute µV handles the saturating baseline we saw
+        in diagnostics — it fires on change, not raw amplitude.
+        """
+        if len(self.recent_eeg) < self.brow_min or len(self.baseline_eeg) < 10:
+            return False
+        baseline = np.mean([np.max(np.abs(np.array(s)[[0, 3]])) for s in self.baseline_eeg])
+        recent   = list(self.recent_eeg)[-self.brow_min:]
+        return all(
+            np.max(np.abs(np.array(s)[[0, 3]])) > baseline + self.brow_delta
+            for s in recent
+        )
+
+    # ------------------------------------------------------------------
 
     def timer_callback(self):
-        # Periodically verify the stream is still alive via resolve_streams()
         now = time.time()
+
+        # --- Periodic stream health check ---
         if now - self._last_stream_check >= self._stream_check_interval:
             self._last_stream_check = now
             active = [s.type() for s in resolve_streams(wait_time=0.5)]
@@ -159,31 +159,39 @@ class EegCmdNode(Node):
                 self.is_connected = True
                 self.get_logger().info('ACC stream restored')
 
-        # Drain ACC samples regardless so the buffer stays fresh
-        # Use a short timeout so a dead stream returns None instead of hanging
+        # --- Drain ACC (keep latest sample only) ---
         acc_sample = None
         sample, _ = self.acc_inlet.pull_sample(timeout=0.05)
         if sample is not None:
             acc_sample = sample
-            # Drain any remaining buffered samples, keep latest
             while True:
                 s, _ = self.acc_inlet.pull_sample(timeout=0.0)
                 if s is None:
                     break
                 acc_sample = s
 
-        # Drain EEG samples into buffer
+        # --- Drain EEG into both buffers ---
         if self.eeg_inlet:
             while True:
                 sample, _ = self.eeg_inlet.pull_sample(timeout=0.0)
                 if sample is None:
                     break
-                self.eeg_buffer.append(sample)
+                self.baseline_eeg.append(sample)
+                self.recent_eeg.append(sample)
 
-        # If disabled, do NOT publish — twist_mux will time out and ignore us
+        # --- Eyebrow raise toggle ---
+        if self.detect_eyebrow():
+            if now - self.last_brow_time > self.brow_cool:
+                self.last_brow_time   = now
+                self.movement_allowed = not self.movement_allowed
+                state = 'UNLOCKED — tilt head to drive' if self.movement_allowed else 'LOCKED'
+                self.get_logger().info(f'Eyebrow raise detected — {state}')
+
+        # --- If UI-disabled, stay silent ---
         if not self.enabled:
             return
 
+        # --- Handle lost ACC sample ---
         if acc_sample is None:
             self.missed_samples += 1
             if self.missed_samples >= self.MISS_LIMIT and self.is_connected:
@@ -194,39 +202,37 @@ class EegCmdNode(Node):
             self.publisher.publish(Twist())
             return
 
-        # Stream is alive
+        # Stream alive
         if not self.is_connected:
             self.is_connected = True
             self.get_logger().info('ACC stream restored')
         self.missed_samples = 0
-
-        # Republish connected status every cycle so late-joining UI picks it up
         status = Bool(); status.data = True
         self.status_pub.publish(status)
 
+        # --- Build Twist from head tilt ---
         msg = Twist()
         x = acc_sample[0] - self.x_baseline
         y = acc_sample[1] - self.y_baseline
 
+        # Left/right turn from X tilt
         if abs(x) > self.x_thresh:
             angular = -x / 0.7 * self.max_angular
             msg.angular.z = float(np.clip(angular, -self.max_angular, self.max_angular))
 
-        if abs(y) > 0.05:
+        # Forward only from Y tilt (no reverse)
+        if y > 0.05:
             linear = y / 0.5 * self.max_linear
-            msg.linear.x = float(np.clip(linear, -self.max_linear, self.max_linear))
+            msg.linear.x = float(np.clip(linear, 0.0, self.max_linear))
 
-        if self.use_attention:
-            attention = self.compute_attention()
-            if attention < self.attn_thresh:
-                msg.linear.x  = 0.0
-                msg.angular.z = 0.0
-                self.get_logger().debug(f'Attention {attention:.2f} - STOPPED')
-                self.publisher.publish(msg)
-                return
+        # --- Gate: zero out commands if movement is locked ---
+        if not self.movement_allowed:
+            msg.linear.x  = 0.0
+            msg.angular.z = 0.0
 
         self.get_logger().info(
-            f'X:{x:+.2f} Y:{y:+.2f} | lin:{msg.linear.x:+.2f} ang:{msg.angular.z:+.2f}'
+            f'X:{x:+.2f} Y:{y:+.2f} | lin:{msg.linear.x:+.2f} ang:{msg.angular.z:+.2f} '
+            f'| gate:{"ON" if self.movement_allowed else "OFF"}'
         )
         self.publisher.publish(msg)
 
@@ -244,7 +250,6 @@ def main(args=None):
     finally:
         node.destroy_node()
         rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()
