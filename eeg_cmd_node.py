@@ -111,8 +111,8 @@ class EegCmdNode(Node):
                 samples.append(sample)
         if samples:
             data = np.array(samples)
-            self.x_baseline = np.mean(data[:, 0])
-            self.y_baseline = np.mean(data[:, 1])
+            self.x_baseline = np.mean(data[:, 1])
+            self.y_baseline = np.mean(data[:, 0])
             self.get_logger().info(
                 f'Calibrated — X baseline: {self.x_baseline:.3f}, Y baseline: {self.y_baseline:.3f}'
             )
@@ -155,9 +155,11 @@ class EegCmdNode(Node):
                 if self.enabled:
                     self.publisher.publish(Twist())
                 return
-            elif not self.is_connected:
+            else:
                 self.is_connected = True
                 self.get_logger().info('ACC stream restored')
+                status = Bool(); status.data = True
+                self.status_pub.publish(status)
 
         # --- Drain ACC (keep latest sample only) ---
         acc_sample = None
@@ -212,15 +214,13 @@ class EegCmdNode(Node):
 
         # --- Build Twist from head tilt ---
         msg = Twist()
-        x = acc_sample[0] - self.x_baseline
-        y = acc_sample[1] - self.y_baseline
+        x = acc_sample[1] - self.y_baseline   # physical left/right is ACC channel 1
+        y = acc_sample[0] - self.x_baseline   # physical forward/back is ACC channel 0
 
-        # Left/right turn from X tilt
         if abs(x) > self.x_thresh:
             angular = -x / 0.7 * self.max_angular
             msg.angular.z = float(np.clip(angular, -self.max_angular, self.max_angular))
 
-        # Forward only from Y tilt (no reverse)
         if y > 0.05:
             linear = y / 0.5 * self.max_linear
             msg.linear.x = float(np.clip(linear, 0.0, self.max_linear))
