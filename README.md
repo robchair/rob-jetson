@@ -174,3 +174,21 @@ def generate_launch_description():
     arguments=['0.32','-0.2325','0.82','0','0','3.14159','base_link','base_laser'] # LiDAR is currently pointed backwards, this is the base_link -> base_laser TF
   )
 ```
+
+
+# How to run the EEG headest
+
+First, check to see if the Muse headset is connected and what the MAC address is:
+```bash
+muselst list
+```
+# Terminal 1: Connect headset
+```bash
+muselsl stream --address 00:55:DA:B834:01
+```
+
+# Terminal 2: Connect headset
+```bash
+python3 ~/rob/eeg_cmd_node.py
+```
+
