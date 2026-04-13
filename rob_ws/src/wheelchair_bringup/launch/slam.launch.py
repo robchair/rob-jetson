@@ -24,6 +24,8 @@ def generate_launch_description():
         "slam_toolbox.yaml"
     ])
 
+
+
     return LaunchDescription([
 
         # ── RPLiDAR A1 driver ──────────────────────────────────────
@@ -43,7 +45,21 @@ def generate_launch_description():
             }]
         ),
 
-        # ── Encoder odom (publishing to /odom) ──────────────────────────────────────
+        # ── Laser angle crop filter ────────────────────────────────
+        # Subscribes to /scan, crops 0°–95° (wheelchair frame zone),
+        # publishes to /scan_filtered.
+        Node(
+            package='wheelchair_bringup',
+            executable='scan_crop_node',
+            name='scan_crop_node',
+            output='screen',
+            parameters=[{
+                'crop_min_deg': 0.0,
+                'crop_max_deg': 95.0,
+            }]
+        ),
+
+        # ── Encoder odometry ──────────────────────────────────────
         Node(
             package='wheelchair_localization',
             executable='encoder_odom',
@@ -60,8 +76,8 @@ def generate_launch_description():
             }]
         ),
 
-        # ── Static TF: base_link -> base_laser ─────────────────────
-        # Measure actual RPLiDAR A1 mounting position on wheelchair
+        # ── Static TF: base_link → base_laser ─────────────────────
+        # TODO: Measure actual RPLiDAR A1 mounting position on wheelchair
         #       and update x, y, z, yaw accordingly.
         Node(
             package='tf2_ros',
@@ -74,8 +90,8 @@ def generate_launch_description():
             ]
         ),
 
-        # ── Static TF: base_link -> ultrasonic_link ────────────────
-        # Dummy transform until ultrasonic is mounted
+        # ── Static TF: base_link → ultrasonic_link ────────────────
+        # Dummy transform until ultrasonic is physically mounted
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',

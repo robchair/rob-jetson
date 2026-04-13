@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'safety_gate_node = wheelchair_bringup.safety_gate_node:main',
+            'scan_crop_node = wheelchair_bringup.scan_crop_node:main',
         ],
     },
 )

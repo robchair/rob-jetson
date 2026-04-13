@@ -1,0 +1,15 @@
+# Crops out scan data between 0° and 95° (the wheelchair frame zone).
+# LaserScanAngularBoundsFilterInPlace sets readings in the
+# [lower_angle, upper_angle] range to NaN.
+#
+# 0°   = 0.0 rad
+# 95°  = 1.6580 rad
+
+scan_filter_node:
+  ros__parameters:
+    scan_filter_chain:
+      - name: angular_crop
+        type: laser_filters/LaserScanAngularBoundsFilterInPlace
+        params:
+          lower_angle: 0.0
+          upper_angle: 1.6580
