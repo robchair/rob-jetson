@@ -130,8 +130,17 @@ ros2 run tf2_ros static_transform_publisher \
   --child-frame-id ultrasonic_link
   ```
 
-Launch SLAM toolbox:
+Launch static TF for ultrasonic:
 
+```bash
+ros2 run tf2_ros static_transform_publisher \
+  --x 0.32 --y -0.2325 --z 0.82 \
+  --roll 0.0 --pitch 0.0 --yaw 3.14159 \
+  --frame-id base_link \
+  --child-frame-id base_laser
+```
+
+Launch SLAM toolbox:
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -189,13 +198,25 @@ First, check to see if the Muse headset is connected and what the MAC address is
 ```bash
 muselst list
 ```
-# Terminal 1: Connect headset
+## Terminal 1: Connect headset
 ```bash
 muselsl stream --address 00:55:DA:B834:01
 ```
 
-# Terminal 2: Connect headset
+## Terminal 2: Connect headset
 ```bash
 python3 ~/rob/eeg_cmd_node.py
 ```
 
+# To run RP LiDAR A1
+
+## To visualize raw scan in RViz2 (sanity check)
+```bash
+ros2 launch sllidar_ros2 view_sllidar_a1_launch.py
+```
+
+## RPLiDAR bringup for SLAM (headless w/o RViz2):
+
+```bash
+ros2 launch sllidar_ros2 sllidar_a1_launch.py serial_port:=/dev/rplidar
+```

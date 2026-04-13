@@ -1,3 +1,6 @@
 [submodule "rob_ws/src/ldlidar_ros2"]
 	path = rob_ws/src/ldlidar_ros2
 	url = https://github.com/ldrobotSensorTeam/ldlidar_ros2.git
+[submodule "rob_ws/src/sllidar_ros2"]
+	path = rob_ws/src/sllidar_ros2
+	url = git@github.com:Slamtec/sllidar_ros2.git

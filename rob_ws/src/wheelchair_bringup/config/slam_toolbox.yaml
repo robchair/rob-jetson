@@ -3,48 +3,89 @@ slam_toolbox:
     use_sim_time: false
     mode: mapping
 
-    # Frames
+    # ── Frames ──────────────────────────────────────────────────────
     map_frame: map
     odom_frame: odom
     base_frame: base_link
     scan_topic: /scan
 
-    # Core ROS behavior
+    # ── Core ROS behavior ───────────────────────────────────────────
     debug_logging: false
     throttle_scans: 1
     transform_publish_period: 0.02
-    map_update_interval: 2.0
-    resolution: 0.05
+    map_update_interval: 2.0          # seconds between map publishes
+    resolution: 0.05                  # 5cm grid cells is good for indoor
     transform_timeout: 0.2
     tf_buffer_duration: 30.0
-    minimum_time_interval: 0.20
 
-    # Laser limits
-    min_laser_range: 0.02
+    # CHANGED: Was 0.20 too slow for ~7Hz scan rate. At 7Hz each scan
+    # is ~0.14s apart, so 0.20 was dropping roughly every other scan.
+    # 0.0 lets every scan through (throttle_scans=1 already limits to
+    # every Nth scan if needed).
+    minimum_time_interval: 0.0
+
+    # ── Laser limits ────────────────────────────────────────────────
+    # RPLiDAR A1 spec: 0.15m min range, 12m max range
+    min_laser_range: 0.15
     max_laser_range: 12.0
 
-    # Only add a new node when motion is meaningful
-    minimum_travel_distance: 0.10
-    minimum_travel_heading: 0.10
-    check_min_dist_and_heading_precisely: false
+    # ── Motion thresholds for new scan nodes ────────────────────────
+    # CHANGED: Tightened from 0.10m/0.10rad. With encoder-only odom on
+    # a wheelchair, we want more frequent scan nodes so the matcher
+    # has less drift to correct between nodes. This is especially
+    # important without an IMU since more nodes = smaller corrections.
+    minimum_travel_distance: 0.05     # add node every 5cm of travel
+    minimum_travel_heading: 0.05      # add node every ~3° of rotation
 
-    # Scan matching
+    # CHANGED: Set to true. With loose encoder odom, precisely checking
+    # both distance AND heading before adding a node prevents the mapper
+    # from skipping important rotational updates (the main cause of
+    # smeared/doubled walls when turning).
+    check_min_dist_and_heading_precisely: true
+
+    # ── Scan matching ───────────────────────────────────────────────
     use_scan_matching: true
     use_scan_barycenter: true
-    minimum_angle_penalty: 0.9
-    minimum_distance_penalty: 0.5
-    distance_variance_penalty: 0.5
-    angle_variance_penalty: 1.0
 
-    # Local scan matching search
-    fine_search_angle_offset: 0.003
-    coarse_search_angle_offset: 0.35
-    coarse_angle_resolution: 0.034
-    correlation_search_space_dimension: 0.5
-    correlation_search_space_resolution: 0.01
-    correlation_search_space_smear_deviation: 0.1
+    # CHANGED: Tightened penalty values. These penalize large angular
+    # and distance corrections during matching. Your old values were
+    # too loose (0.9/0.5), allowing the matcher to accept poor fits.
+    # Higher values = matcher is pickier about accepting a match.
+    minimum_angle_penalty: 0.95
+    minimum_distance_penalty: 0.65
 
-    # Loop closure
+    # CHANGED: Reduced variance penalties to be stricter about how much
+    # the matcher is allowed to deviate from the odometry prior.
+    # With encoder-only odom, you actually want some trust in odom
+    # (it's decent for short distances) while still allowing scan
+    # matching to correct drift.
+    distance_variance_penalty: 0.3
+    angle_variance_penalty: 0.5
+
+    # ── Local scan matching search window ───────────────────────────
+    # Control how far the correlative scan matcher searches for
+    # a match. Larger = more robust but slower.
+    fine_search_angle_offset: 0.003       # fine step angle (radians)
+    coarse_search_angle_offset: 0.35      # coarse search window
+    coarse_angle_resolution: 0.034        # coarse step size
+
+    # CHANGED: Reduced from 0.5m to 0.3m. With more frequent scan nodes
+    # (every 5cm), the matcher doesn't need to search as far. Smaller
+    # search window = less chance of matching to the wrong feature
+    correlation_search_space_dimension: 0.3
+
+    # CHANGED: Increased from 0.01 to 0.005 for finer matching
+    # resolution. The A1 has better angular resolution than the LD20,
+    # so use finer search grid without it being wasted.
+    correlation_search_space_resolution: 0.005
+
+    # CHANGED: Reduced from 0.1 to 0.03. Smear deviation controls how
+    # much the scans are blurred before correlation. High values make
+    # matching more forgiving and more smeared. Could be the reason 
+    # our maps were so smeared. Consider lowering to 0.02 later.
+    correlation_search_space_smear_deviation: 0.03
+
+    # ── Loop closure ────────────────────────────────────────────────
     do_loop_closing: true
     loop_search_maximum_distance: 6.0
     loop_match_minimum_chain_size: 8
@@ -55,13 +96,13 @@ slam_toolbox:
     loop_search_space_resolution: 0.05
     loop_search_space_smear_deviation: 0.03
 
-    # Linking nearby scans in the graph
+    # ── Graph linking ───────────────────────────────────────────────
     scan_buffer_size: 10
     scan_buffer_maximum_scan_distance: 10.0
     link_match_minimum_response_fine: 0.1
     link_scan_maximum_distance: 1.5
 
-    # Solver plugin settings recommended in slam_toolbox repo
+    # ── Solver ──────────────────────────────────────────────────────
     solver_plugin: solver_plugins::CeresSolver
     ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
     ceres_preconditioner: SCHUR_JACOBI
