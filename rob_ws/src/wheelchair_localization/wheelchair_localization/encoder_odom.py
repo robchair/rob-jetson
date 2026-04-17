@@ -33,7 +33,7 @@ class EncoderOdom(Node):
         super().__init__("encoder_odom")
 
         self.declare_parameter("encoder_topic", "/wheel_encoder_ticks")
-        self.declare_parameter("odom_topic", "/odom")
+        self.declare_parameter("odom_topic", "/wheel/odom")
         self.declare_parameter("base_frame", "base_link")
         self.declare_parameter("odom_frame", "odom")
         self.declare_parameter("publish_tf", True)
@@ -212,7 +212,7 @@ class EncoderOdom(Node):
             t.transform.rotation.y = qy
             t.transform.rotation.z = qz
             t.transform.rotation.w = qw
-            self.tf_broadcaster.sendTransform(t)
+            #self.tf_broadcaster.sendTransform(t)
 
 
 def main():
