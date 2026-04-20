@@ -5,13 +5,23 @@ from launch.actions import ExecuteProcess
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 from launch.actions import TimerAction
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
     mux_yaml = PathJoinSubstitution([
         FindPackageShare("wheelchair_bringup"),
         "config",
-        "twist_mux.yaml"
+        "twist_mux.yaml",
+    
     ])
+
+    ekf_launch = IncludeLaunchDescription(
+    PythonLaunchDescriptionSource([
+        FindPackageShare("wheelchair_bringup"),
+        "/launch/EKF.launch.py"
+    ])
+)
     venv_python = "/home/rob/rob/roboVoice/venv/bin/python3"
     voice_module = "robovoice_ros2.voice_cmd_node"
     eeg_script = "/home/rob/rob/eeg_cmd_node.py"
@@ -78,4 +88,6 @@ def generate_launch_description():
                 {"cmd_timeout_sec": 0.5},
             ],
         ),
+
+        ekf_launch
     ])

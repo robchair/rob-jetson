@@ -36,7 +36,7 @@ class EncoderOdom(Node):
         self.declare_parameter("odom_topic", "/wheel/odom")
         self.declare_parameter("base_frame", "base_link")
         self.declare_parameter("odom_frame", "odom")
-        self.declare_parameter("publish_tf", True)
+        self.declare_parameter("publish_tf", False)
 
         self.declare_parameter("wheel_radius_m", 0.15)#change to new radius
         self.declare_parameter("wheel_base_m", 0.60)#change to new base 

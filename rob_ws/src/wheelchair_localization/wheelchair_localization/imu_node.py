@@ -39,7 +39,7 @@ class BNO055UartNode(Node):
         self.declare_parameter("imu_topic", "/imu/data")
         self.declare_parameter("calib_topic", "/imu/calibration_status")
         self.declare_parameter("frame_id", "imu_link")
-        self.declare_parameter("poll_hz", 10.0)
+        self.declare_parameter("poll_hz", 20.0)
         
         self.last_calib_pub_time =0.0
 
@@ -136,7 +136,7 @@ class BNO055UartNode(Node):
         self.ser.reset_input_buffer()
         cmd = bytes([0xAA, 0x01, reg, length])
         self.ser.write(cmd)
-        time.sleep(0.05)
+        time.sleep(0.01)
         return self.ser.read(length + 2)
 
     def check_chip_id(self) -> bool:
