@@ -220,3 +220,19 @@ ros2 launch sllidar_ros2 view_sllidar_a1_launch.py
 ```bash
 ros2 launch sllidar_ros2 sllidar_a1_launch.py serial_port:=/dev/rplidar
 ```
+## Full Bringup with EKF launch:
+
+```bash
+source ~/rob/roboVoice/venv/bin/activate
+cd ~/rob/rob_ws
+source /opt/ros/humble/setup.bash
+colcon build --packages-select wheelchair_bringup wheelchair_localization
+source install/setup.bash
+ros2 launch wheelchair_bringup demo.launch.py
+```
+
+
+##EKF Only Launch
+```bash
+ros2 launch wheelchair_bringup EKF.launch.py
+```
