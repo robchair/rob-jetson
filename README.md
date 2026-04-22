@@ -237,3 +237,26 @@ ros2 launch wheelchair_bringup demo.launch.py
 ```bash
 ros2 launch wheelchair_bringup EKF.launch.py
 ```
+
+## Human Readable Code for the EKF(debugging)
+```bash
+ros2 topic echo /odometry/filtered | awk '
+/position:/{p=1} 
+p && /x:/{printf "Position  X: %s\n", $2; p=0}
+/position:/{p2=1}
+p2 && /y:/{printf "          Y: %s\n", $2; p2=0}
+/orientation:/{o=1}
+o && /z:/{printf "Heading   Z: %s\n", $2}
+o && /w:/{printf "          W: %s\n", $2; o=0}
+/linear:/{l=1}
+l && /x:/{printf "Velocity  Vx: %s m/s\n", $2; l=0}
+/angular:/{a=1}
+a && /z:/{printf "          Wz: %s rad/s\n---\n", $2; a=0}
+'
+```
+
+
+## Echo for EKF output
+```bash
+ros2 topic echo /odometry/filtered
+```
