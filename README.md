@@ -222,17 +222,30 @@ ros2 launch sllidar_ros2 sllidar_a1_launch.py serial_port:=/dev/rplidar
 ```
 # EKF Localization
 
-## Full Bringup with EKF launch:
+## Full EKF launch:(4 Terminals)
 
+## Terminal 1: Arduino Base Driver _(publishes wheel encoder ticks)_
+```bash
+cd ~/rob/rob_ws/src/arduino_base_driver/arduino_base_driver
+python3 arduino_base_driver_node.py
+```
+
+## Terminal 2: EKF launch
 ```bash
 cd ~/rob/rob_ws
 source /opt/ros/humble/setup.bash
-colcon build --packages-select wheelchair_bringup wheelchair_localization
 source install/setup.bash
-ros2 launch wheelchair_bringup demo.launch.py
+ros2 launch wheelchair_bringup wheelchair_ekf.launch.py debug_calibration:=true
+```
+## Terminal 3:EKF Output 
+```bash
+ros2 topic echo /odometry/filtered
 ```
 
-
+## Terminal 4:Wheel Encoder Ticks
+```bash
+ros2 topic echo /wheel_encoder_ticks
+```
 ## EKF Only Launch
 ```bash
 ros2 launch wheelchair_bringup EKF.launch.py
