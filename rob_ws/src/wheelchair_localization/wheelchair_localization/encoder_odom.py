@@ -38,8 +38,8 @@ class EncoderOdom(Node):
         self.declare_parameter("odom_frame", "odom")
         self.declare_parameter("publish_tf", False)
 
-        self.declare_parameter("wheel_radius_m", 0.15)#change to new radius
-        self.declare_parameter("wheel_base_m", 0.60)#change to new base 
+        self.declare_parameter("wheel_radius_m", 0.305)#change to new radius
+        self.declare_parameter("wheel_base_m", 0.515)#change to new base 
         self.declare_parameter("ticks_per_rev", 1200.0)
 
         # Optional sign correction at ROS level

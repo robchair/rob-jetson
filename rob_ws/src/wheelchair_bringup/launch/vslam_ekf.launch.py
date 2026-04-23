@@ -3,13 +3,16 @@ vslam_ekf.launch.py
 
 Full integrated stack:
   1. RealSense D435 camera
-  2. Arduino base driver       -> /wheel_encoder_ticks
-  3. Encoder odometry          -> /wheel/odom
-  4. BNO055 IMU                -> /imu/data
-  5. Static TF: base_link -> imu_link
-  6. EKF filter                -> /odometry/filtered  (odom -> base_link TF)
-  7. Robot state publisher     -> TF from URDF
-  8. RTAB-Map VSLAM            -> consumes /odometry/filtered + camera
+  2. Encoder odometry          -> /wheel/odom  (ticks from Arduino via demo.launch.py)
+  3. BNO055 IMU                -> /imu/data
+  4. Static TF: base_link -> imu_link
+  5. EKF filter                -> /odometry/filtered  (odom -> base_link TF)
+  6. Robot state publisher     -> TF from URDF
+  7. RTAB-Map VSLAM            -> consumes /odometry/filtered + camera
+
+NOTE: arduino_base_driver_node is owned by demo.launch.py
+      It publishes /wheel_encoder_ticks (consumed here by encoder_odom)
+      and consumes /cmd_vel_safe (from the control stack).
 
 Usage:
   ros2 launch wheelchair_bringup vslam_ekf.launch.py
@@ -71,23 +74,9 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # ------------------------------------------------------------------ #
-    # 2. Arduino base driver
-    # ------------------------------------------------------------------ #
-    arduino_driver = Node(
-        package='arduino_base_driver',
-        executable='arduino_base_driver_node',
-        name='arduino_base_driver',
-        output='screen',
-        parameters=[{
-            'port': '/dev/ttyACM0',
-            'baud': 115200,
-            'cmd_timeout_sec': 0.5,
-        }],
-    )
-
-    # ------------------------------------------------------------------ #
-    # 3. Encoder odometry
+    # 2. Encoder odometry
     # publish_tf: False — EKF owns odom -> base_link TF
+    # Consumes /wheel_encoder_ticks published by arduino_base_driver (demo.launch.py)
     # ------------------------------------------------------------------ #
     encoder_odom = Node(
         package='wheelchair_localization',
@@ -103,13 +92,13 @@ def launch_setup(context, *args, **kwargs):
             'wheel_radius_m': 0.305,
             'wheel_base_m':   0.515,
             'ticks_per_rev':  1199.67,
-            'left_sign':      1.0,
-            'right_sign':     -1.0,
+            'left_sign':      -1.0,
+            'right_sign':     1.0,
         }],
     )
 
     # ------------------------------------------------------------------ #
-    # 4. BNO055 IMU
+    # 3. BNO055 IMU
     # ------------------------------------------------------------------ #
     imu_node = Node(
         package='wheelchair_localization',
@@ -132,7 +121,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # ------------------------------------------------------------------ #
-    # 5. Static TF: base_link -> imu_link
+    # 4. Static TF: base_link -> imu_link
     # Update x/y/z once IMU is physically mounted
     # ------------------------------------------------------------------ #
     static_imu_tf = Node(
@@ -140,14 +129,14 @@ def launch_setup(context, *args, **kwargs):
         executable='static_transform_publisher',
         name='static_tf_base_to_imu',
         arguments=[
-            '0.0', '0.0', '0.15',
+            '-0.04', '0.0', '0.475',
             '0.0', '0.0', '0.0',
             'base_link', 'imu_link',
         ],
     )
 
     # ------------------------------------------------------------------ #
-    # 6. EKF filter
+    # 5. EKF filter
     # Publishes /odometry/filtered and odom -> base_link TF
     # ------------------------------------------------------------------ #
     ekf_node = Node(
@@ -159,7 +148,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # ------------------------------------------------------------------ #
-    # 7. Robot state publisher
+    # 6. Robot state publisher
     # Publishes TF from URDF: base_link -> camera_link, ultrasonic_link
     # ------------------------------------------------------------------ #
     robot_state_publisher = Node(
@@ -171,7 +160,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # ------------------------------------------------------------------ #
-    # 8. RTAB-Map
+    # 7. RTAB-Map
     # Consumes /odometry/filtered instead of raw /odom
     # ------------------------------------------------------------------ #
     rtabmap_node = Node(
@@ -204,14 +193,12 @@ def launch_setup(context, *args, **kwargs):
             ('rgb/image',       '/camera/camera/color/image_raw'),
             ('rgb/camera_info', '/camera/camera/color/camera_info'),
             ('depth/image',     '/camera/camera/aligned_depth_to_color/image_raw'),
-            # KEY CHANGE: was /odom, now consumes EKF fused odometry
             ('odom',            '/odometry/filtered'),
         ],
     )
 
     return [
         camera_node,
-        arduino_driver,
         encoder_odom,
         imu_node,
         static_imu_tf,
