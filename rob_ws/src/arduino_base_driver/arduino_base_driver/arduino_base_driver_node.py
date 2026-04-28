@@ -33,7 +33,7 @@ class ArduinoBaseDriver(Node):
         self.declare_parameter("max_angular_speed", 1.0)
 
         # PWM limits — max PWM sent to Arduino
-        self.declare_parameter("max_pwm", 60)
+        self.declare_parameter("max_pwm", 65)
 
         self.port = self.get_parameter("port").value
         self.baud = int(self.get_parameter("baud").value)

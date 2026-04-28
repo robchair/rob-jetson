@@ -57,6 +57,9 @@ def generate_launch_description():
                 {"port": "/dev/ttyARDUINO"},
                 {"baud": 115200},
                 {"cmd_timeout_sec": 0.5},
+                {"max_linear_speed": 0.25},
+                {"max_angular_speed": 0.40},
+                {"max_pwm": 40},
             ],
         ),
     ])
