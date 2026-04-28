@@ -98,7 +98,7 @@ def generate_launch_description():
         name="amcl",
         output="screen",
         parameters=[{
-            "robot_model_type": "differential",
+            "robot_model_type": "nav2_amcl::DifferentialMotionModel",
             "base_frame_id": "base_link",
             "odom_frame_id": "odom",
             "global_frame_id": "map",
@@ -106,6 +106,18 @@ def generate_launch_description():
             "min_particles": 200,
             "max_particles": 500,
             "tf_broadcast": True,
+        }],
+    ),
+
+    Node(
+        package="nav2_lifecycle_manager",
+        executable="lifecycle_manager",
+        name="lifecycle_manager_localization",
+        output="screen",
+        parameters=[{
+            "use_sim_time": False,
+            "autostart": True,
+            "node_names": ["map_server", "amcl"],
         }],
     ),
 

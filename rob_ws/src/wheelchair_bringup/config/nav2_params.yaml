@@ -162,11 +162,11 @@ behavior_server:
     local_footprint_topic: local_costmap/published_footprint
     global_footprint_topic: global_costmap/published_footprint
     cycle_frequency: 10.0
-    behavior_plugins: ["wait"]    # ["spin", "backup", "wait"] unsafe for user
-    #spin:
-    #  plugin: "nav2_behaviors/Spin"
-    #backup:
-    #  plugin: "nav2_behaviors/BackUp"
+    behavior_plugins: ["spin", "backup", "wait"]    # ["spin", "backup", "wait"] unsafe for user
+    spin:
+      plugin: "nav2_behaviors/Spin"
+    backup:
+      plugin: "nav2_behaviors/BackUp"
     wait:
       plugin: "nav2_behaviors/Wait"
 
